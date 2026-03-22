@@ -9,16 +9,13 @@ let currentTimes = null;
 let currentDateKey = null;
 let userLat = null;
 let userLng = null;
-let elevation = 0;
 let azimuthKiblat = 0;
 let currentHeading = 0;
 let smoothHeading = 0;
 let audioEnabled = true;
 let notified = {};
-
 const adzanSubuh = new Audio("audio/adzan_subuh.mp3");
 const adzanNormal = new Audio("audio/adzan_normal.mp3");
-
 const metodeSelect = document.getElementById("metode");
 const jadwalList = document.getElementById("jadwalList");
 
@@ -113,7 +110,7 @@ async function getGeoData() {
     const lokasiFinal = lokasiParts.length ? capitalizeWords(lokasiParts.join(", ")) : "Lokasi Tidak Ditemukan";
 
     const namaText = "📍 " + lokasiFinal;
-    const koordinatText = userLat.toFixed(6) + ", " + userLng.toFixed(6) + " - " + elevation.toFixed(2) + " mdpl";
+    const koordinatText = userLat.toFixed(6) + ", " + userLng.toFixed(6);
 
     // HALAMAN UTAMA
     document.getElementById("namaLokasi").innerText = namaText;
