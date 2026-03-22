@@ -151,12 +151,12 @@ header{
   margin-top: auto;
   padding: 18px;
   font-size:14px;
-  color:#808080;
+  color:#a78c6d;
   border-top:1px solid #334155;
 }
 
 .developer-link {
-  color:#38bdf8;
+  color:#00FFFF;
   text-decoration:none;
   font-weight:500;
   transition:0.3s ease;
