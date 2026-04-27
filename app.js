@@ -1,6 +1,6 @@
-/* ====================================================
-   ADZAN PRO - FINAL PRODUCTION BY ARIADI FORESTER
-==================================================== */
+/* =================================
+   ADZAN PRO - FINAL PRODUCTION
+================================= */
 
 const KAABAH = { lat: 21.4225, lng: 39.8262 };
 
@@ -91,31 +91,46 @@ function bersihkanKabupaten(text) {
 
 async function getGeoData() {
   try {
-    // Menggunakan Nominatim OpenStreetMap secara langsung
     const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${userLat}&lng=${userLng}`, {
         headers: { "Accept-Language": "id-ID" }
     });
     const data = await res.json();
     const addr = data.address || {};
 
-    const desa = addr.village || addr.suburb || addr.hamlet || "";
+    // Mapping key Nominatim ke variabel lokasi
+    const desa = addr.village || addr.suburb || addr.hamlet || addr.neighbourhood || "";
     const kecamatan = addr.city_district || addr.district || "";
-    const kabupaten = bersihkanKabupaten(addr.city || addr.county || "");
+    const kabupaten = bersihkanKabupaten(addr.city || addr.county || addr.town || "");
     const provinsi = addr.state || "";
 
+    // Gabungkan bagian lokasi yang ada saja
     const lokasiParts = [desa, kecamatan, kabupaten, provinsi].filter(Boolean);
-    const lokasiFinal = lokasiParts.length ? capitalizeWords(lokasiParts.join(", ")) : "Lokasi Tidak Ditemukan";
+    
+    // Jika lokasiParts kosong, gunakan display_name (cadangan terakhir)
+    let lokasiFinal = lokasiParts.length 
+      ? capitalizeWords(lokasiParts.join(", ")) 
+      : (data.display_name ? data.display_name.split(',').slice(0, 3).join(',') : "Lokasi Terdeteksi");
 
     const namaText = "📍 " + lokasiFinal;
     const koordinatText = userLat.toFixed(6) + ", " + userLng.toFixed(6);
 
-    document.getElementById("namaLokasi").innerText = namaText;
-    document.getElementById("koordinat").innerText = koordinatText;
-    document.getElementById("compassLokasi").innerText = namaText;
-    document.getElementById("compassKoordinat").innerText = koordinatText;
+    // UPDATE UI HALAMAN UTAMA
+    const mainLokasi = document.getElementById("namaLokasi");
+    const mainKoord = document.getElementById("koordinat");
+    if (mainLokasi) mainLokasi.innerText = namaText;
+    if (mainKoord) mainKoord.innerText = koordinatText;
+
+    // UPDATE UI OVERLAY KOMPAS (SINKRON)
+    const compLokasi = document.getElementById("compassLokasi");
+    const compKoord = document.getElementById("compassKoordinat");
+    if (compLokasi) compLokasi.innerText = namaText;
+    if (compKoord) compKoord.innerText = koordinatText;
+
+    console.log("Data Lokasi Terupdate:", lokasiFinal);
 
   } catch (e) {
-    document.getElementById("namaLokasi").innerText = "📍 Gagal memuat lokasi";
+    console.error("Gagal Geocoding:", e);
+    document.getElementById("namaLokasi").innerText = "📍 Gagal memuat detail alamat";
   }
 }
 
