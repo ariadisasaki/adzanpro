@@ -25,10 +25,10 @@ const adzanNormal = new Audio("audio/adzan_normal.mp3");
 const metodeSelect = document.getElementById("metode");
 const jadwalList = document.getElementById("jadwalList");
 
-/* ==========================
-   HELPER: FORMAT 00:11 FIX
-========================== */
-// Fungsi ini mengubah angka desimal (misal 4.5) menjadi jam "04:30"
+/* ================
+   HELPER: FORMAT
+================ */
+// Ubah angka desimal
 function formatWaktuManual(time) {
     if (typeof time === 'string' && time.includes(':')) return time.substring(0, 5);
     
@@ -86,9 +86,9 @@ function initMetode() {
   });
 }
 
-/* ===============================
-   GEOLOKASI (NOMINATIM)
-================================= */
+/* =============
+   GEOLOKASI
+============= */
 function capitalizeWords(str) { return str.replace(/\b\w/g, l => l.toUpperCase()); }
 function bersihkanKabupaten(text) { return text ? text.replace(/^Kabupaten\s+/i, "").replace(/^Kota\s+/i, "") : ""; }
 
@@ -119,20 +119,20 @@ async function getGeoData() {
         
         // 2. Susun komponen alamat secara hierarkis (Persis Script Anda)
         const komponenAlamat = [
-            a.village || a.suburb || a.town || a.city || "", // Desa/Kelurahan/Kota
-            a.district || a.county || "",                    // Kecamatan/Kabupaten
-            a.state || "",                                   // Provinsi                         
-            a.country || ""                                  // Negara
+            a.village || a.suburb || a.town || a.city || "",
+            a.district || a.county || "",                    
+            a.state || "",                                                          
+            a.country || ""                                  
         ];
 
-        // 3. Gabungkan komponen yang tidak kosong dengan tanda koma (Persis Script Anda)
+        // 3. Gabungkan komponen alamat
         const alamatLengkap = komponenAlamat
             .filter(v => v && v.trim() !== "") 
             .join(", ");                  
 
         const hasilFinal = alamatLengkap ? "📍 " + alamatLengkap : "📍 Lokasi tidak dikenal";
 
-        // Update ke semua elemen UI Adzan Pro
+        // Update ke semua elemen UI
         if (lokasiEl) lokasiEl.innerText = hasilFinal;
         if (compLokasi) compLokasi.innerText = hasilFinal;
 
@@ -144,18 +144,41 @@ async function getGeoData() {
     }
 }
 
-/* ===============================
-   LOAD JADWAL (CORE FIX)
-================================= */
+/* ===============
+   LOAD JADWAL
+=============== */
 const namaSholatID = { fajr: "Subuh", sunrise: "Terbit", dhuhr: "Dzuhur", asr: "Ashar", maghrib: "Maghrib", isha: "Isya" };
 const urutanSholat = ["fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha"];
 
 function tampilkanJadwal(times) {
   if (!jadwalList) return;
   jadwalList.innerHTML = "";
-  urutanSholat.forEach(key => {
+  
+  const now = new Date();
+  const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
+  
+  let activeIndex = -1;
+
+  // Sholat yang sedang aktif
+  for (let i = 0; i < urutanSholat.length; i++) {
+    const [h, m] = times[urutanSholat[i]].split(":").map(Number);
+    const prayerTotalMinutes = h * 60 + m;
+
+    if (currentTotalMinutes >= prayerTotalMinutes) {
+      activeIndex = i;
+    }
+  }
+
+  // Render elemen UI
+  urutanSholat.forEach((key, index) => {
     const div = document.createElement("div");
     div.className = "jadwal-item";
+    
+    // Tambahkan class 'active' jika indeks sesuai
+    if (index === activeIndex) {
+      div.classList.add("active");
+    }
+
     const jam = times[key] || "--:--";
     div.innerHTML = `<span>${namaSholatID[key]}</span><span>${jam}</span>`;
     jadwalList.appendChild(div);
@@ -195,33 +218,45 @@ async function loadJadwal() {
   startCountdown();
 }
 
-/* ============================
+/* =================================
    COUNTDOWN & TICKS & ORIENTASI
-============================ */
-// ... (Bagian startCountdown, checkNearPrayer, checkNotification sama dengan kode asli Anda) ...
+================================== */
 function startCountdown() {
   if (countdownInterval) clearInterval(countdownInterval);
   countdownInterval = setInterval(() => {
     if (!currentTimes) return;
     const now = new Date();
+    
+    // Update status card aktif secara otomatis setiap menit (detik 0)
+    if (now.getSeconds() === 0) {
+      tampilkanJadwal(currentTimes);
+    }
+
     let nextName = null, nextDate = null;
     for (let key of urutanSholat) {
       const [h, m] = currentTimes[key].split(":").map(Number);
       const waktu = new Date(); waktu.setHours(h, m, 0, 0);
       if (waktu > now) { nextName = key; nextDate = waktu; break; }
     }
+    
     if (!nextDate) {
       const [h, m] = currentTimes["fajr"].split(":").map(Number);
       nextDate = new Date(); nextDate.setDate(nextDate.getDate() + 1);
       nextDate.setHours(h, m, 0, 0); nextName = "fajr";
     }
+
     const totalDetik = Math.floor((nextDate - now) / 1000);
     const jam = Math.floor(totalDetik / 3600);
     const menit = Math.floor((totalDetik % 3600) / 60);
     const detik = totalDetik % 60;
+
     document.getElementById("menuju").innerText = totalDetik <= 1800 ? `Sebentar lagi Waktu ${namaSholatID[nextName]}` : `Menuju Waktu ${namaSholatID[nextName]}`;
     document.getElementById("countdown").innerText = `${jam > 0 ? jam + ' jam ' : ''}${menit} menit ${detik} detik lagi`;
-    if (totalDetik === 0) checkNotification(nextName, 0);
+    
+    if (totalDetik === 0) {
+      checkNotification(nextName, 0);
+      tampilkanJadwal(currentTimes); // Refresh jadwal saat waktu sholat tiba
+    }
   }, 1000);
 }
 
@@ -274,7 +309,7 @@ function hitungKiblat() {
   const azimuthEl = document.getElementById("azimuthKabah");
   if (azimuthEl) azimuthEl.innerText = `Azimuth Ka'bah : ${azimuthKiblat.toFixed(2)}°`;
 
-  // --- BAGIAN YANG HILANG: HITUNG & TAMPILKAN JARAK ---
+  // Hitung jarak ke Ka'bah
   const jarak = haversine(userLat, userLng, KAABAH.lat, KAABAH.lng);
   const jarakEl = document.getElementById("jarakKabah");
   if (jarakEl) {
@@ -282,7 +317,7 @@ function hitungKiblat() {
   }
 }
 
-// Pastikan fungsi Haversine juga ada di dalam script Anda
+// Hitung Haversine
 function haversine(lat1, lon1, lat2, lon2) {
   const R = 6371; // Radius bumi dalam Km
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -308,10 +343,10 @@ window.addEventListener("deviceorientation", e => {
   const selisih = ((azimuthKiblat - smoothHeading + 540) % 360) - 180;
   document.getElementById("selisihSudut").innerText = `Selisih Sudut : ${Math.abs(selisih).toFixed(1)}°`;
 
-  // 3. UPDATE DINAMIS TEKS ARAH MATA ANGIN (BAGIAN YANG DIPERBAIKI)
+  // 3. Arah mata angin dinamis
   const labelsLengkap = ["Utara", "Timur Laut", "Timur", "Tenggara", "Selatan", "Barat Daya", "Barat", "Barat Laut"];
   
-  // Mengonversi smoothHeading (0-360) ke indeks array (0-7)
+  // Konversi smoothHeading (0-360) ke indeks array (0-7)
   const index = Math.round(smoothHeading / 45) % 8;
   
   const arahEl = document.getElementById("arahMataAngin");
@@ -320,9 +355,9 @@ window.addEventListener("deviceorientation", e => {
   }
 }, true);
 
-/* ===============================
+/* ===============
    INITIALIZE
-================================= */
+=============== */
 function initApp() {
   initMetode();
   createCompassTicks();
@@ -346,9 +381,9 @@ document.getElementById("toggleAudio").onclick = () => {
 
 document.addEventListener("DOMContentLoaded", initApp);
 
-/* ====================================================
-   PERFORMANCE MONITOR (HILAL CHECKER STYLE)
-==================================================== */
+/* ========================
+   PERFORMANCE MONITOR
+======================== */
 function updatePerformanceLog() {
     // 1. Bersihkan console agar log tidak menumpuk
     console.clear();
@@ -368,18 +403,18 @@ function updatePerformanceLog() {
         { Parameter: "Memory Usage", Value: window.performance.memory ? (window.performance.memory.usedJSHeapSize / 1048576).toFixed(2) + " MB" : "N/A" }
     ];
 
-    // 3. Tampilkan Header Keren
+    // 3. Tampilkan Header
     console.log("%c ADZAN PRO - PERFORMANCE MONITORING ", "background: #2c3e50; color: #ecf0f1; font-weight: bold; padding: 5px; border-radius: 3px;");
     
     // 4. Tampilkan Tabel
     console.table(performanceData);
 
-    // 5. Log Jadwal Aktif (Untuk memastikan sinkronisasi data)
+    // 5. Log Jadwal Aktif (untuk memastikan sinkronisasi data)
     if (currentTimes) {
         console.log("%c Jadwal Sholat Aktif: ", "font-weight: bold; color: #2980b9;");
         console.table(currentTimes);
     }
 }
 
-// Jalankan log setiap 2 detik agar tetap update tanpa membebani prosesor
+// Jalankan log setiap 30 detik agar tetap update tanpa membebani prosesor
 setInterval(updatePerformanceLog, 30000);
