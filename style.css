@@ -40,20 +40,21 @@ header{
   border-radius:25px;
 }
 
-.lokasi{
-  text-align:center;
-  margin-top:15px;
-  font-size:14px;
+.lokasi {
+  text-align: center;
+  margin-top: 10px; /* Dikurangi dari 15px */
+  margin-bottom: 5px; /* Tambahkan ini agar tidak jauh ke bawah */
+  font-size: 14px;
 }
 
-.control-bar{
-  display:flex;
-  justify-content:space-between;
-  padding:15px;
+.control-bar {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 15px; /* Padding atas-bawah dikurangi dari 15px menjadi 5px */
 }
 
-#jadwalList{
-  padding:15px;
+#jadwalList {
+  padding: 5px 15px; /* Padding atas dikurangi agar card lebih dekat ke toggle */
 }
 
 .jadwal-item{
@@ -62,7 +63,7 @@ header{
   border-radius:14px;
   display:flex;
   justify-content:space-between;
-  margin-bottom:10px;
+  margin-bottom:10px; /* Dikurangi sedikit dari 12px */
   box-shadow:0 4px 10px rgba(0,0,0,0.05);
 }
 
