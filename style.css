@@ -332,3 +332,22 @@ header{
 select, button, .developer-link {
   cursor: pointer;
 }
+
+/* Gaya untuk Jadwal Sholat yang sedang Aktif */
+.jadwal-item.active {
+  background: #a78c6d; /* Warna emas/coklat khas Adzan Pro */
+  color: #fff;         /* Teks jadi putih agar kontras */
+  transform: scale(1.05); /* Sedikit lebih besar */
+  border: 2px solid #8e7355;
+  box-shadow: 0 8px 20px rgba(167, 140, 109, 0.4);
+  z-index: 2;
+}
+
+/* Tambahkan sedikit indikator teks "Sekarang" jika ingin lebih detail */
+.jadwal-item.active::after {
+  content: "• AKTIF";
+  font-size: 10px;
+  font-weight: 800;
+  margin-left: 10px;
+  letter-spacing: 1px;
+}
