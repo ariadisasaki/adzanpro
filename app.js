@@ -64,14 +64,27 @@ function initMetode() {
   const saved = localStorage.getItem("metode") || "Kemenag";
   metodeSelect.value = saved;
   
-  // Re-inisialisasi dengan paksa format 24h
+  // Inisialisasi PrayTime
   praytime = new PrayTime(saved);
-  praytime.setFormat('24h'); // Memastikan format 24 jam
+
+  // DETEKSI FUNGSI FORMAT (Agar tidak TypeError)
+  if (typeof praytime.setFormat === 'function') {
+    praytime.setFormat('24h');
+  } else if (typeof praytime.setTimeFormat === 'function') {
+    praytime.setTimeFormat('24h');
+  } else {
+    // Jika keduanya tidak ada, kita atur manual lewat properti jika memungkinkan
+    praytime.timeFormat = '24h';
+  }
 
   metodeSelect.addEventListener("change", () => {
     localStorage.setItem("metode", metodeSelect.value);
     praytime = new PrayTime(metodeSelect.value);
-    praytime.setFormat('24h');
+    
+    // Ulangi pengecekan saat ganti metode
+    if (typeof praytime.setFormat === 'function') praytime.setFormat('24h');
+    else if (typeof praytime.setTimeFormat === 'function') praytime.setTimeFormat('24h');
+    
     loadJadwal();
   });
 }
