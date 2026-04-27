@@ -382,4 +382,4 @@ function updatePerformanceLog() {
 }
 
 // Jalankan log setiap 2 detik agar tetap update tanpa membebani prosesor
-setInterval(updatePerformanceLog, 1000);
+setInterval(updatePerformanceLog, 30000);
