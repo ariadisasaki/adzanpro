@@ -250,11 +250,13 @@ window.addEventListener("deviceorientation", e => {
    INITIALIZE APP
 ================================= */
 function initApp() {
+    console.log("Aplikasi Dimulai...");
     initMetode();
     
-    // Inisialisasi Ticks Kompas (Visual)
+    // Inisialisasi Ticks Kompas
     const ticksCont = document.getElementById("ticks");
     if(ticksCont) {
+        ticksCont.innerHTML = "";
         for (let i = 0; i < 360; i += 5) {
             const t = document.createElement("div");
             t.className = "tick " + (i % 30 === 0 ? "large" : (i % 10 === 0 ? "medium" : "small"));
@@ -263,10 +265,17 @@ function initApp() {
         }
     }
 
-    // Ambil GPS
+    // Set Lokasi Default (Jakarta) agar UI tidak kosong saat nunggu GPS
+    userLat = -6.1751;
+    userLng = 106.8272;
+    document.getElementById("namaLokasi").innerText = "📍 Mencari lokasi...";
+    loadJadwal(); 
+
+    // Ambil GPS Asli
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             async pos => {
+                console.log("GPS Berhasil didapat");
                 userLat = pos.coords.latitude; 
                 userLng = pos.coords.longitude;
                 await getGeoData(); 
@@ -274,11 +283,13 @@ function initApp() {
                 loadJadwal();
             },
             err => { 
-                const nLok = document.getElementById("namaLokasi");
-                if(nLok) nLok.innerText = "❌ GPS tidak aktif"; 
+                console.warn("GPS Gagal:", err.message);
+                document.getElementById("namaLokasi").innerText = "📍 Jakarta (Default - GPS Mati)";
             },
-            { enableHighAccuracy: true, timeout: 10000 }
+            { enableHighAccuracy: true, timeout: 8000 }
         );
+    } else {
+        document.getElementById("namaLokasi").innerText = "📍 Jakarta (Browser tidak dukung GPS)";
     }
 }
 
