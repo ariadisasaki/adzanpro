@@ -1,4 +1,4 @@
-const CACHE="adzan-pro-v1";
+const CACHE="adzan-pro-v1.0.1";
 
 self.addEventListener("install",e=>{
   e.waitUntil(
