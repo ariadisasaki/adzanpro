@@ -237,6 +237,50 @@ window.addEventListener("deviceorientation", e => {
     document.getElementById("arahMataAngin").innerText = `Arah Mata Angin : ${labels[Math.round(smoothHeading / 45) % 8]}`;
 }, true);
 
+ /* =================================
+   FUNGSI PEMBUAT ELEMEN KOMPAS
+================================== */
+function createCompassTicks() {
+    const container = document.getElementById("ticks");
+    if (!container) return;
+    container.innerHTML = "";
+    
+    for (let i = 0; i < 360; i += 5) {
+        const tick = document.createElement("div");
+        // Menentukan ukuran garis: Besar tiap 30°, Sedang tiap 10°, sisanya Kecil
+        let size = "small";
+        if (i % 30 === 0) size = "large";
+        else if (i % 10 === 0) size = "medium";
+        
+        tick.className = `tick ${size}`;
+        tick.style.transform = `rotate(${i}deg)`;
+        container.appendChild(tick);
+    }
+}
+
+function buatLabelPiringan() {
+    const container = document.getElementById("directionLabels");
+    if (!container) return;
+    container.innerHTML = "";
+    
+    // Daftar label mata angin dan posisinya dalam derajat
+    const labels = [
+        { t: "N", a: 0 }, { t: "NE", a: 45 }, { t: "E", a: 90 }, { t: "SE", a: 135 },
+        { t: "S", a: 180 }, { t: "SW", a: 225 }, { t: "W", a: 270 }, { t: "NW", a: 315 }
+    ];
+
+    labels.forEach(l => {
+        const div = document.createElement("div");
+        div.className = "direction-label";
+        div.innerText = l.t;
+        const rad = l.a * (Math.PI / 180);
+        // Jarak label dari pusat piringan (44%)
+        div.style.left = `${50 + Math.sin(rad) * 44}%`;
+        div.style.top = `${50 - Math.cos(rad) * 44}%`;
+        container.appendChild(div);
+    });
+}      
+
 /* ===============
    INITIALIZE
 =============== */
