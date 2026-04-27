@@ -345,3 +345,42 @@ document.getElementById("toggleAudio").onclick = () => {
 };
 
 document.addEventListener("DOMContentLoaded", initApp);
+
+/* ====================================================
+   PERFORMANCE MONITOR (HILAL CHECKER STYLE)
+==================================================== */
+function updatePerformanceLog() {
+    // 1. Bersihkan console agar log tidak menumpuk
+    console.clear();
+
+    const now = new Date();
+    
+    // 2. Siapkan data untuk tabel
+    const performanceData = [
+        { Parameter: "Waktu Sistem", Value: now.toLocaleTimeString("id-ID") },
+        { Parameter: "Status GPS", Value: (userLat && userLng) ? "✅ Aktif" : "❌ Mencari..." },
+        { Parameter: "Latitude", Value: userLat ? userLat.toFixed(6) : "-" },
+        { Parameter: "Longitude", Value: userLng ? userLng.toFixed(6) : "-" },
+        { Parameter: "Azimuth Kiblat", Value: azimuthKiblat ? azimuthKiblat.toFixed(2) + "°" : "-" },
+        { Parameter: "Heading (Smooth)", Value: smoothHeading ? smoothHeading.toFixed(1) + "°" : "-" },
+        { Parameter: "Metode Hisab", Value: metodeSelect?.value || "Default" },
+        { Parameter: "Audio Adzan", Value: audioEnabled ? "🔔 ON" : "🔕 OFF" },
+        { Parameter: "Memory Usage", Value: window.performance.memory ? (window.performance.memory.usedJSHeapSize / 1048576).toFixed(2) + " MB" : "N/A" }
+    ];
+
+    // 3. Tampilkan Header Keren
+    console.log("%c ADZAN PRO - PERFORMANCE MONITORING ", "background: #2c3e50; color: #ecf0f1; font-weight: bold; padding: 5px; border-radius: 3px;");
+    
+    // 4. Tampilkan Tabel
+    console.table(performanceData);
+
+    // 5. Log Jadwal Aktif (Untuk memastikan sinkronisasi data)
+    if (currentTimes) {
+        console.log("%c Jadwal Sholat Aktif: ", "font-weight: bold; color: #2980b9;");
+        console.table(currentTimes);
+    }
+}
+
+// Jalankan log setiap 2 detik agar tetap update tanpa membebani prosesor
+setInterval(updatePerformanceLog, 2000);
+
