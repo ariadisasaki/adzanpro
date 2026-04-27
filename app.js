@@ -45,35 +45,25 @@ const metodeList = {
   Singapore:"Singapore",
   Kemenag:"Kemenag / MABIMS"
 };
-
 function initMetode() {
-  // ... (kode lama Anda untuk loop metodeSelect)
+  Object.keys(metodeList).forEach(key => {
+    const opt = document.createElement("option");
+    opt.value = key;
+    opt.textContent = metodeList[key];
+    metodeSelect.appendChild(opt);
+  });
 
   const saved = localStorage.getItem("metode") || "Kemenag";
   metodeSelect.value = saved;
-  
-  // INISIALISASI YANG BENAR:
   praytime = new PrayTime(saved);
-  
-  // Tambahkan baris ini untuk mengunci format waktu ke 24 Jam
-  praytime.setMethod(saved); 
-  praytime.adjust({ 
-    fajr: 20,     // Standar Kemenag untuk Subuh
-    isha: 18,     // Standar Kemenag untuk Isya
-    highLats: 'None' 
-  });
-  
-  // PAKSA FORMAT 24 JAM
-  praytime.setTimeFormat(praytime.Float); // Opsional: jika ingin olah manual
-  // ATAU yang paling aman untuk script Anda:
-  praytime.setTimeFormat(praytime.Time24); 
 
   metodeSelect.addEventListener("change", () => {
     localStorage.setItem("metode", metodeSelect.value);
-    praytime.setMethod(metodeSelect.value);
+    praytime = new PrayTime(metodeSelect.value);
     loadJadwal();
   });
 }
+initMetode();
 
 /* ================
    GPS & ELEVASI
@@ -154,79 +144,68 @@ function labelSholat(key){ return namaSholatID[key]||key; }
 const urutanSholat = ["fajr","sunrise","dhuhr","asr","maghrib","isha"];
 
 /* ===============================
-   TAMPILKAN JADWAL (OPTIMASI UI)
+   TAMPILKAN JADWAL SHOLAT
 ================================= */
-function tampilkanJadwal(times) {
-  // Gunakan Fragment agar tidak terjadi reflow berulang kali (lebih cepat)
-  const fragment = document.createDocumentFragment();
-  jadwalList.innerHTML = ""; 
-
-  urutanSholat.forEach(key => {
+function tampilkanJadwal(times){
+  jadwalList.innerHTML = "";
+  Object.keys(namaSholatID).forEach(key => {
     const div = document.createElement("div");
     div.className = "jadwal-item";
-    
-    // Validasi format: pastikan jam benar-benar string HH:mm
-    let jam = "--:--";
-    if (times && times[key]) {
-        // Regex untuk memastikan hanya mengambil format 00:00
-        const match = times[key].match(/\d{2}:\d{2}/);
-        jam = match ? match[0] : "--:--";
-    }
-
+    const jam = times[key]?.substring(0,5) || "--:--";
     div.innerHTML = `<span>${labelSholat(key)}</span><span>${jam}</span>`;
-    fragment.appendChild(div);
+    jadwalList.appendChild(div);
   });
-  jadwalList.appendChild(fragment);
 }
 
 /* ===============================
-   LOAD JADWAL (DIPERBAIKI)
+   LOAD JADWAL FINAL
 ================================= */
-async function loadJadwal() {
-  if (!userLat || !userLng) return;
+async function loadJadwal(){
+  if(!userLat || !userLng) return;
 
   const now = new Date();
   const todayKey = now.toDateString();
-  
-  // 1. Tampilkan "Loading" atau data offline dulu agar UI tidak kosong/delay
-  const offlineTimes = praytime.location([userLat, userLng])
-                               .timezone(Intl.DateTimeFormat().resolvedOptions().timeZone)
-                               .getTimes(now);
-  
-  // Langsung tampilkan data offline/PrayTime sebagai placeholder (Instan!)
-  if (!currentTimes) {
-      currentTimes = offlineTimes;
-      tampilkanJadwal(currentTimes);
-  }
+  if(currentDateKey === todayKey && currentTimes) return;
 
-  // 2. Baru kemudian ambil data akurat dari API secara Background
-  const metodeValue = localStorage.getItem("metode") || "Kemenag";
+  currentDateKey = todayKey;
+  notified = {};
+
+  const metodeValue = localStorage.getItem("metode")||"Kemenag";
   const aladhanMethod = {
-    MWL: 3, ISNA: 2, Egypt: 5, Makkah: 4,
-    Karachi: 1, Singapore: 7, Kemenag: 20
-  }[metodeValue] || 20;
+    MWL:3, ISNA:2, Egypt:5, Makkah:4,
+    Karachi:1, Singapore:7, Kemenag:20
+  }[metodeValue]||20;
 
   try {
     const res = await fetch(`https://api.aladhan.com/v1/timings?latitude=${userLat}&longitude=${userLng}&method=${aladhanMethod}`);
     const json = await res.json();
-    
-    if (json.code === 200) {
-      const apiTimes = json.data.timings;
-      currentTimes = {
-        fajr: apiTimes.Fajr,
-        sunrise: apiTimes.Sunrise,
-        dhuhr: apiTimes.Dhuhr,
-        asr: apiTimes.Asr,
-        maghrib: apiTimes.Maghrib,
-        isha: apiTimes.Isha
-      };
-      // Update UI dengan data API yang lebih akurat
-      tampilkanJadwal(currentTimes);
-      startCountdown();
-    }
-  } catch (err) {
-    console.error("API Error, tetap menggunakan offline data", err);
+    if(json.code !== 200) throw new Error("API error");
+
+    const apiTimes = json.data.timings;
+    currentTimes = {
+      fajr: apiTimes.Fajr.substring(0,5),
+      sunrise: apiTimes.Sunrise.substring(0,5),
+      dhuhr: apiTimes.Dhuhr.substring(0,5),
+      asr: apiTimes.Asr.substring(0,5),
+      maghrib: apiTimes.Maghrib.substring(0,5),
+      isha: apiTimes.Isha.substring(0,5)
+    };
+
+  } catch(err){
+    console.warn("API gagal, fallback ke PrayTime",err);
+    const offlineTimes = praytime.location([userLat,userLng]).timezone(Intl.DateTimeFormat().resolvedOptions().timeZone).getTimes(now);
+    currentTimes = {
+      fajr: offlineTimes.fajr,
+      sunrise: offlineTimes.sunrise,
+      dhuhr: offlineTimes.dhuhr,
+      asr: offlineTimes.asr,
+      maghrib: offlineTimes.maghrib,
+      isha: offlineTimes.isha
+    };
   }
+
+  tampilkanJadwal(currentTimes);
+  startCountdown();
 }
 
 /* Helper subtractMinutes */
