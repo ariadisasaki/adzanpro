@@ -167,26 +167,61 @@ function tampilkanJadwal(times) {
 
 async function loadJadwal() {
   if (!userLat || !userLng) return;
+  
   const now = new Date();
   const todayKey = now.toDateString();
   
-  notified = {};
+  // Reset notifikasi jika ganti hari
+  if (currentDateKey !== todayKey) {
+    notified = {};
+    currentDateKey = todayKey;
+  }
+
   const metodeValue = metodeSelect.value;
-  const aladhanMethod = { MWL: 3, ISNA: 2, Egypt: 5, Makkah: 4, Karachi: 1, Singapore: 7, Kemenag: 20 }[metodeValue] || 20;
+  // Mapping ID Metode untuk API Aladhan
+  const aladhanMethod = { 
+    MWL: 3, ISNA: 2, Egypt: 5, Makkah: 4, 
+    Karachi: 1, Singapore: 7, Kemenag: 20 
+  }[metodeValue] || 20;
 
   try {
+    // 1. Ambil dari API Aladhan (Prioritas Utama)
     const res = await fetch(`https://api.aladhan.com/v1/timings?latitude=${userLat}&longitude=${userLng}&method=${aladhanMethod}`);
     const json = await res.json();
-    const apiTimes = json.data.timings;
-    currentTimes = {
-      fajr: apiTimes.Fajr, sunrise: apiTimes.Sunrise, dhuhr: apiTimes.Dhuhr,
-      asr: apiTimes.Asr, maghrib: apiTimes.Maghrib, isha: apiTimes.Isha
-    };
-    currentDateKey = todayKey;
+    
+    if (json.code === 200) {
+      const apiTimes = json.data.timings;
+      currentTimes = {
+        fajr: apiTimes.Fajr,
+        sunrise: apiTimes.Sunrise,
+        dhuhr: apiTimes.Dhuhr,
+        asr: apiTimes.Asr,
+        maghrib: apiTimes.Maghrib,
+        isha: apiTimes.Isya
+      };
+      console.log("Jadwal dimuat via API");
+    } else {
+      throw new Error("API Response Not OK");
+    }
   } catch (err) {
-    // Fallback PrayTime jika API gagal
-    const offlineTimes = praytime.getTimes(now, [userLat, userLng], "auto");
-    currentTimes = offlineTimes;
+    console.warn("API Gagal, menggunakan Fallback PrayTime Lokal");
+    
+    // 2. Fallback ke PrayTime (Jika Offline/API Error)
+    // Kita ambil timezone offset otomatis (WITA = 8)
+    const tzOffset = now.getTimezoneOffset() / -60; 
+    
+    // Set metode dan hitung
+    praytime.setMethod(metodeValue);
+    const offlineTimes = praytime.getTimes(now, [userLat, userLng], tzOffset);
+    
+    currentTimes = {
+      fajr: offlineTimes.fajr,
+      sunrise: offlineTimes.sunrise,
+      dhuhr: offlineTimes.dhuhr,
+      asr: offlineTimes.asr,
+      maghrib: offlineTimes.maghrib,
+      isha: offlineTimes.isha
+    };
   }
 
   tampilkanJadwal(currentTimes);
