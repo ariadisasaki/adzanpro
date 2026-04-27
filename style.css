@@ -351,3 +351,8 @@ select, button, .developer-link {
   margin-left: 10px;
   letter-spacing: 1px;
 }
+
+.jadwal-item.active span {
+  font-weight: 800 !important; /* Memastikan teks sangat tebal */
+  letter-spacing: 0.5px;      /* Memberi sedikit jarak antar huruf agar elegan */
+}
