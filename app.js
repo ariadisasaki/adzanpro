@@ -117,67 +117,89 @@ function initMetode() {
 // Pastikan dipanggil di awal script
 initMetode();
 
+/* Tambahkan ini di bagian variabel global (baris atas) */
+let elevation = 0; 
+
 /* ================
-   GPS & ELEVASI
+   GPS & ELEVASI (FIXED)
 ================ */
-navigator.geolocation.getCurrentPosition(
-  async pos => {
-    userLat = pos.coords.latitude;
-    userLng = pos.coords.longitude;
+// Gunakan fungsi ini agar lebih rapi
+function inisialisasiLokasi() {
+  if (!navigator.geolocation) {
+    document.getElementById("namaLokasi").innerText = "❌ Browser tidak mendukung GPS";
+    return;
+  }
 
-    await getGeoData();
-    hitungKiblat();
-    loadJadwal();
-  },
-  err => {
-    document.getElementById("namaLokasi").innerText =
-      "❌ Izin lokasi ditolak / GPS tidak aktif";
-  },
-  { enableHighAccuracy:true, timeout:15000, maximumAge:0 }
-);
+  navigator.geolocation.getCurrentPosition(
+    async pos => {
+      userLat = pos.coords.latitude;
+      userLng = pos.coords.longitude;
 
-function capitalizeWords(str) {
-  return str.replace(/\b\w/g, l => l.toUpperCase());
+      // Panggil fungsi secara berurutan
+      await getGeoData();
+      hitungKiblat();
+      loadJadwal();
+    },
+    err => {
+      // Default jika GPS gagal (Contoh: Jakarta)
+      console.warn("GPS Gagal, menggunakan lokasi default");
+      userLat = -6.1751; 
+      userLng = 106.8272;
+      document.getElementById("namaLokasi").innerText = "📍 Jakarta (Default)";
+      loadJadwal();
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
 }
 
-function bersihkanKabupaten(text) {
-  if (!text) return "";
-  return text.replace(/^Kabupaten\s+/i, "").replace(/^Kota\s+/i, "");
-}
+// Jalankan inisialisasi
+inisialisasiLokasi();
 
 async function getGeoData() {
   try {
+    // Nominatim membutuhkan User-Agent yang jelas agar tidak diblokir
     const res = await fetch(
-      "https://geocode.ariadishut.workers.dev?lat=" + userLat + "&lng=" + userLng
+      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${userLat}&lng=${userLng}`,
+      {
+        headers: {
+          "Accept-Language": "id-ID,id;q=0.9" // Meminta nama dalam Bahasa Indonesia
+        }
+      }
     );
+    
     const data = await res.json();
-    elevation = data.elevation || 0;
+    const addr = data.address;
 
-    const desa = data.village || "";
-    const kecamatan = data.subdistrict || "";
-    const kabupaten = bersihkanKabupaten(data.district || "");
-    const provinsi = data.province || "";
+    // Nominatim menggunakan key yang sedikit berbeda
+    const desa = addr.village || addr.suburb || addr.hamlet || "";
+    const kecamatan = addr.city_district || addr.district || "";
+    const kabupaten = bersihkanKabupaten(addr.city || addr.county || "");
+    const provinsi = addr.state || "";
 
     const lokasiParts = [desa, kecamatan, kabupaten, provinsi].filter(Boolean);
-    const lokasiFinal = lokasiParts.length ? capitalizeWords(lokasiParts.join(", ")) : "Lokasi Tidak Ditemukan";
+    const lokasiFinal = lokasiParts.length 
+      ? capitalizeWords(lokasiParts.join(", ")) 
+      : "Lokasi Tidak Dikenal";
 
     const namaText = "📍 " + lokasiFinal;
     const koordinatText = userLat.toFixed(6) + ", " + userLng.toFixed(6);
 
-    // HALAMAN UTAMA
+    // Update UI Halaman Utama
     document.getElementById("namaLokasi").innerText = namaText;
     document.getElementById("koordinat").innerText = koordinatText;
 
-    // POP UP KOMPAS
-    document.getElementById("compassLokasi").innerText = namaText;
-    document.getElementById("compassKoordinat").innerText = koordinatText;
+    // Update UI Pop Up Kompas
+    if(document.getElementById("compassLokasi")) {
+      document.getElementById("compassLokasi").innerText = namaText;
+      document.getElementById("compassKoordinat").innerText = koordinatText;
+    }
 
-    // Matikan animasi GPS jika ada
     const icon = document.getElementById("gpsIcon");
     if (icon) icon.style.animation = "none";
 
   } catch (e) {
-    document.getElementById("namaLokasi").innerText = "📍 Gagal memuat lokasi";
+    console.error("Nominatim Error:", e);
+    document.getElementById("namaLokasi").innerText = "📍 Gagal memuat nama lokasi";
   }
 }
 
