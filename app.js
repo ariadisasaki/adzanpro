@@ -64,15 +64,14 @@ function initMetode() {
   const saved = localStorage.getItem("metode") || "Kemenag";
   metodeSelect.value = saved;
   
-  // Inisialisasi PrayTime dengan pengecekan fungsi format
+  // Re-inisialisasi dengan paksa format 24h
   praytime = new PrayTime(saved);
-  if (typeof praytime.setFormat === 'function') praytime.setFormat('24h');
-  else if (typeof praytime.setTimeFormat === 'function') praytime.setTimeFormat('24h');
+  praytime.setFormat('24h'); // Memastikan format 24 jam
 
   metodeSelect.addEventListener("change", () => {
     localStorage.setItem("metode", metodeSelect.value);
     praytime = new PrayTime(metodeSelect.value);
-    if (typeof praytime.setFormat === 'function') praytime.setFormat('24h');
+    praytime.setFormat('24h');
     loadJadwal();
   });
 }
@@ -165,31 +164,26 @@ function tampilkanJadwal(times) {
   });
 }
 
-async function loadJadwal() {
-  if (!userLat || !userLng) return;
-  
+async function loadJadwal(){
+  if(!userLat || !userLng) return;
+
   const now = new Date();
   const todayKey = now.toDateString();
   
-  // Reset notifikasi jika ganti hari
-  if (currentDateKey !== todayKey) {
-    notified = {};
-    currentDateKey = todayKey;
-  }
-
+  // Reset state
+  notified = {};
   const metodeValue = metodeSelect.value;
-  // Mapping ID Metode untuk API Aladhan
-  const aladhanMethod = { 
-    MWL: 3, ISNA: 2, Egypt: 5, Makkah: 4, 
-    Karachi: 1, Singapore: 7, Kemenag: 20 
-  }[metodeValue] || 20;
+  const aladhanMethod = {
+    MWL:3, ISNA:2, Egypt:5, Makkah:4,
+    Karachi:1, Singapore:7, Kemenag:20
+  }[metodeValue]||20;
 
   try {
-    // 1. Ambil dari API Aladhan (Prioritas Utama)
+    // 1. Coba ambil dari API Aladhan (Sangat Akurat)
     const res = await fetch(`https://api.aladhan.com/v1/timings?latitude=${userLat}&longitude=${userLng}&method=${aladhanMethod}`);
     const json = await res.json();
     
-    if (json.code === 200) {
+    if(json.code === 200) {
       const apiTimes = json.data.timings;
       currentTimes = {
         fajr: apiTimes.Fajr,
@@ -197,22 +191,19 @@ async function loadJadwal() {
         dhuhr: apiTimes.Dhuhr,
         asr: apiTimes.Asr,
         maghrib: apiTimes.Maghrib,
-        isha: apiTimes.Isya
+        isha: apiTimes.Isha
       };
-      console.log("Jadwal dimuat via API");
+      currentDateKey = todayKey;
     } else {
-      throw new Error("API Response Not OK");
+      throw new Error("API Response Error");
     }
-  } catch (err) {
-    console.warn("API Gagal, menggunakan Fallback PrayTime Lokal");
-    
-    // 2. Fallback ke PrayTime (Jika Offline/API Error)
-    // Kita ambil timezone offset otomatis (WITA = 8)
-    const tzOffset = now.getTimezoneOffset() / -60; 
-    
-    // Set metode dan hitung
-    praytime.setMethod(metodeValue);
-    const offlineTimes = praytime.getTimes(now, [userLat, userLng], tzOffset);
+
+  } catch(err){
+    console.warn("API gagal, menggunakan offline PrayTime", err);
+    // 2. Fallback Offline (Perbaikan Parameter)
+    // Gunakan offset timezone lokal agar tidak muncul 00:xx
+    const timezone = -now.getTimezoneOffset() / 60; 
+    const offlineTimes = praytime.getTimes(now, [userLat, userLng], timezone);
     
     currentTimes = {
       fajr: offlineTimes.fajr,
