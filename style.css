@@ -352,7 +352,13 @@ select, button, .developer-link {
   letter-spacing: 1px;
 }
 
+/* Pastikan teks di dalam item aktif otomatis tebal */
 .jadwal-item.active span {
-  font-weight: 800 !important; /* Memastikan teks sangat tebal */
-  letter-spacing: 0.5px;      /* Memberi sedikit jarak antar huruf agar elegan */
+  font-weight: 800 !important;
+  font-size: 1.1em;
+}
+
+/* Tambahan agar transisi perpindahan bold tidak kaku */
+.jadwal-item span {
+  transition: all 0.3s ease;
 }
