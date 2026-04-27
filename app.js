@@ -249,48 +249,54 @@ window.addEventListener("deviceorientation", e => {
 /* ===============================
    INITIALIZE APP
 ================================= */
-function initApp() {
-    console.log("Aplikasi Dimulai...");
-    initMetode();
-    
-    // Inisialisasi Ticks Kompas
-    const ticksCont = document.getElementById("ticks");
-    if(ticksCont) {
-        ticksCont.innerHTML = "";
-        for (let i = 0; i < 360; i += 5) {
-            const t = document.createElement("div");
-            t.className = "tick " + (i % 30 === 0 ? "large" : (i % 10 === 0 ? "medium" : "small"));
-            t.style.transform = `rotate(${i}deg)`;
-            ticksCont.appendChild(t);
+function initMetode() {
+    const metodeSelect = document.getElementById("metode");
+    if(!metodeSelect) return;
+
+    const daftarMode = {
+        Kemenag: "Kemenag / MABIMS",
+        Makkah: "Umm Al-Qura (Makkah)",
+        MWL: "Muslim World League",
+        ISNA: "ISNA (North America)",
+        Egypt: "Egyptian General Authority",
+        Karachi: "Univ. Islamic Sciences",
+        Singapore: "MUIS Singapore"
+    };
+
+    metodeSelect.innerHTML = "";
+    Object.keys(daftarMode).forEach(key => {
+        const opt = document.createElement("option");
+        opt.value = key;
+        opt.textContent = daftarMode[key];
+        metodeSelect.appendChild(opt);
+    });
+
+    const saved = localStorage.getItem("metode") || "Kemenag";
+    metodeSelect.value = saved;
+
+    if (typeof PrayTime !== 'undefined') {
+        praytime = new PrayTime();
+        praytime.setMethod(saved);
+        
+        // PERBAIKAN DI SINI:
+        // Coba gunakan setFormat jika setTimeFormat gagal
+        if (typeof praytime.setFormat === 'function') {
+            praytime.setFormat('24h');
+        } else if (typeof praytime.setTimeFormat === 'function') {
+            praytime.setTimeFormat('24h');
         }
+
+        praytime.adjust({ fajr: 20, isha: 18, highLats: 'None' });
     }
 
-    // Set Lokasi Default (Jakarta) agar UI tidak kosong saat nunggu GPS
-    userLat = -6.1751;
-    userLng = 106.8272;
-    document.getElementById("namaLokasi").innerText = "📍 Mencari lokasi...";
-    loadJadwal(); 
-
-    // Ambil GPS Asli
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            async pos => {
-                console.log("GPS Berhasil didapat");
-                userLat = pos.coords.latitude; 
-                userLng = pos.coords.longitude;
-                await getGeoData(); 
-                hitungKiblat(); 
-                loadJadwal();
-            },
-            err => { 
-                console.warn("GPS Gagal:", err.message);
-                document.getElementById("namaLokasi").innerText = "📍 Jakarta (Default - GPS Mati)";
-            },
-            { enableHighAccuracy: true, timeout: 8000 }
-        );
-    } else {
-        document.getElementById("namaLokasi").innerText = "📍 Jakarta (Browser tidak dukung GPS)";
-    }
+    metodeSelect.addEventListener("change", () => {
+        localStorage.setItem("metode", metodeSelect.value);
+        if(praytime) {
+            praytime.setMethod(metodeSelect.value);
+            if(metodeSelect.value === "Kemenag") praytime.adjust({ fajr: 20, isha: 18 });
+        }
+        loadJadwal();
+    });
 }
 
 // Event Listeners
