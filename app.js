@@ -159,7 +159,7 @@ function tampilkanJadwal(times) {
   
   let activeIndex = -1;
 
-  // Sholat yang sedang aktif
+  // Cari index sholat yang aktif saat ini
   for (let i = 0; i < urutanSholat.length; i++) {
     const [h, m] = times[urutanSholat[i]].split(":").map(Number);
     const prayerTotalMinutes = h * 60 + m;
@@ -168,6 +168,32 @@ function tampilkanJadwal(times) {
       activeIndex = i;
     }
   }
+
+  // Render elemen UI
+  urutanSholat.forEach((key, index) => {
+    const div = document.createElement("div");
+    div.className = "jadwal-item";
+    
+    const isAktif = index === activeIndex;
+    if (isAktif) {
+      div.classList.add("active");
+    }
+
+    const jam = times[key] || "--:--";
+    const namaSholat = namaSholatID[key];
+
+    // Jika aktif, teks nama sholat dibungkus tag <strong> agar Bold
+    div.innerHTML = `
+      <span style="${isAktif ? 'font-weight: 800; font-size: 1.1em;' : ''}">
+        ${namaSholat}
+      </span>
+      <span style="${isAktif ? 'font-weight: 800;' : ''}">
+        ${jam}
+      </span>
+    `;
+     jadwalList.appendChild(div);
+  });
+}
 
   // Render elemen UI
   urutanSholat.forEach((key, index) => {
