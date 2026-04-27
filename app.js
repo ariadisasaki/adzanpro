@@ -93,28 +93,57 @@ function capitalizeWords(str) { return str.replace(/\b\w/g, l => l.toUpperCase()
 function bersihkanKabupaten(text) { return text ? text.replace(/^Kabupaten\s+/i, "").replace(/^Kota\s+/i, "") : ""; }
 
 async function getGeoData() {
+  const mainLokasi = document.getElementById("namaLokasi");
+  const mainKoord = document.getElementById("koordinat");
+  const compLokasi = document.getElementById("compassLokasi");
+  const compKoord = document.getElementById("compassKoordinat");
+
+  // 1. Update teks koordinat angka di semua panel
+  const koordinatTeks = `${userLat.toFixed(6)}, ${userLng.toFixed(6)}`;
+  if (mainKoord) mainKoord.innerText = koordinatTeks;
+  if (compKoord) compKoord.innerText = koordinatTeks;
+
   try {
-    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${userLat}&lon=${userLng}`, {
-        headers: { "Accept-Language": "id-ID", "User-Agent": "AdzanPro" }
-    });
-    const data = await res.json();
-    const addr = data.address || {};
-    const desa = addr.village || addr.suburb || addr.hamlet || addr.neighbourhood || "";
-    const kecamatan = addr.city_district || addr.district || "";
-    const kabupaten = bersihkanKabupaten(addr.city || addr.county || addr.town || "");
+    if (mainLokasi) mainLokasi.innerText = "📍 Mencari lokasi...";
+
+    // Fetch ke Nominatim dengan parameter accept-language=id
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${userLat}&lon=${userLng}&format=json&accept-language=id`,
+      {
+        headers: { "User-Agent": "AdzanProApp/1.0" }
+      }
+    );
     
-    const lokasiParts = [desa, kecamatan, kabupaten].filter(Boolean);
-    const lokasiFinal = lokasiParts.length ? capitalizeWords(lokasiParts.join(", ")) : "Lokasi Terdeteksi";
+    if (!r.ok) throw new Error("Gagal mengambil data");
+    
+    const d = await r.json();
+    const a = d.address || {};
+    
+    // 2. Susun komponen alamat secara hierarkis sesuai permintaan Anda
+    // a.city_district seringkali berisi nama Kecamatan di Indonesia untuk data Nominatim
+    const komponenAlamat = [
+        a.village || a.suburb || a.hamlet || "",          // Desa/Kelurahan
+        a.city_district || a.district || a.municipality || "", // Kecamatan
+        bersihkanKabupaten(a.city || a.county || a.town || ""), // Kabupaten/Kota
+        a.state || ""                                     // Provinsi
+    ];
 
-    const namaText = "📍 " + lokasiFinal;
-    const koordinatText = userLat.toFixed(6) + ", " + userLng.toFixed(6);
+    // 3. Gabungkan komponen yang tidak kosong dengan tanda koma
+    const alamatLengkap = komponenAlamat
+        .filter(v => v && v.trim() !== "") 
+        .join(", ");                  
 
-    document.getElementById("namaLokasi").innerText = namaText;
-    document.getElementById("koordinat").innerText = koordinatText;
-    document.getElementById("compassLokasi").innerText = namaText;
-    document.getElementById("compassKoordinat").innerText = koordinatText;
-  } catch (e) {
-    document.getElementById("namaLokasi").innerText = "📍 Gagal memuat lokasi";
+    const hasilFinal = alamatLengkap ? "📍 " + capitalizeWords(alamatLengkap) : "📍 Lokasi tidak dikenal";
+
+    // Update UI Halaman Utama
+    if (mainLokasi) mainLokasi.innerText = hasilFinal;
+
+    // Update UI Overlay Kompas
+    if (compLokasi) compLokasi.innerText = hasilFinal;
+
+  } catch (err) {
+    console.error("Geocode Error:", err);
+    if (mainLokasi) mainLokasi.innerText = "📍 Gagal memuat nama lokasi";
   }
 }
 
