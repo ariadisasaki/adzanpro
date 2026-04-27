@@ -151,7 +151,7 @@ const namaSholatID = { fajr: "Subuh", sunrise: "Terbit", dhuhr: "Dzuhur", asr: "
 const urutanSholat = ["fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha"];
 
 function tampilkanJadwal(times) {
-  if (!jadwalList) return;
+  if (!jadwalList || !times) return;
   jadwalList.innerHTML = "";
   
   const now = new Date();
@@ -159,7 +159,7 @@ function tampilkanJadwal(times) {
   
   let activeIndex = -1;
 
-  // Cari index sholat yang aktif saat ini
+  // Tentukan sholat mana yang sedang aktif
   for (let i = 0; i < urutanSholat.length; i++) {
     const [h, m] = times[urutanSholat[i]].split(":").map(Number);
     const prayerTotalMinutes = h * 60 + m;
@@ -169,29 +169,21 @@ function tampilkanJadwal(times) {
     }
   }
 
-  // Render elemen UI
+  // Render elemen
   urutanSholat.forEach((key, index) => {
     const div = document.createElement("div");
     div.className = "jadwal-item";
     
-    const isAktif = index === activeIndex;
-    if (isAktif) {
+    // Jika index sesuai, beri class active (Bold akan diatur oleh CSS di atas)
+    if (index === activeIndex) {
       div.classList.add("active");
     }
 
     const jam = times[key] || "--:--";
     const namaSholat = namaSholatID[key];
 
-    // Jika aktif, teks nama sholat dibungkus tag <strong> agar Bold
-    div.innerHTML = `
-      <span style="${isAktif ? 'font-weight: 800; font-size: 1.1em;' : ''}">
-        ${namaSholat}
-      </span>
-      <span style="${isAktif ? 'font-weight: 800;' : ''}">
-        ${jam}
-      </span>
-    `;
-     jadwalList.appendChild(div);
+    div.innerHTML = `<span>${namaSholat}</span><span>${jam}</span>`;
+    jadwalList.appendChild(div);
   });
 }
 
@@ -249,13 +241,17 @@ async function loadJadwal() {
 ================================== */
 function startCountdown() {
   if (countdownInterval) clearInterval(countdownInterval);
+  
+  let lastMinute = -1;
+
   countdownInterval = setInterval(() => {
     if (!currentTimes) return;
     const now = new Date();
     
-    // Update status card aktif secara otomatis setiap menit (detik 0)
-    if (now.getSeconds() === 0) {
+    // Update UI Jadwal HANYA jika menit berubah (agar tidak stuck)
+    if (now.getMinutes() !== lastMinute) {
       tampilkanJadwal(currentTimes);
+      lastMinute = now.getMinutes();
     }
 
     let nextName = null, nextDate = null;
@@ -281,7 +277,7 @@ function startCountdown() {
     
     if (totalDetik === 0) {
       checkNotification(nextName, 0);
-      tampilkanJadwal(currentTimes); // Refresh jadwal saat waktu sholat tiba
+      tampilkanJadwal(currentTimes);
     }
   }, 1000);
 }
