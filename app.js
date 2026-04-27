@@ -45,24 +45,76 @@ const metodeList = {
   Singapore:"Singapore",
   Kemenag:"Kemenag / MABIMS"
 };
+
+/* ============================
+   INIT METODE HITUNG HISAB (FINAL)
+============================ */
 function initMetode() {
-  Object.keys(metodeList).forEach(key => {
+  // 1. Bersihkan dulu menu dropdown sebelum mengisi
+  metodeSelect.innerHTML = "";
+
+  // 2. Daftar lengkap mode sesuai standar PrayTime.js & Aladhan
+  const daftarMode = {
+    Kemenag: "Kemenag / MABIMS",
+    Makkah: "Umm Al-Qura (Makkah)",
+    MWL: "Muslim World League",
+    ISNA: "ISNA (North America)",
+    Egypt: "Egyptian General Authority",
+    Karachi: "Univ. Islamic Sciences",
+    Singapore: "MUIS Singapore",
+    Tehran: "Institute of Geophysics",
+    Jafari: "Shia Ithna-Ashari"
+  };
+
+  // 3. Masukkan pilihan ke dalam elemen UI (Select)
+  Object.keys(daftarMode).forEach(key => {
     const opt = document.createElement("option");
     opt.value = key;
-    opt.textContent = metodeList[key];
+    opt.textContent = daftarMode[key];
     metodeSelect.appendChild(opt);
   });
 
+  // 4. Ambil preferensi user atau default ke Kemenag
   const saved = localStorage.getItem("metode") || "Kemenag";
   metodeSelect.value = saved;
-  praytime = new PrayTime(saved);
 
+  // 5. Inisialisasi library PrayTime dengan SETTINGAN AMAN
+  praytime = new PrayTime(); 
+  
+  // Kunci format agar tidak muncul 00:12 (karena AM/PM)
+  praytime.setTimeFormat(praytime.Time24);
+  
+  // Set metode awal
+  praytime.setMethod(saved);
+
+  // Penyesuaian khusus untuk wilayah Indonesia/MABIMS
+  praytime.adjust({ 
+    fajr: 20, 
+    isha: 18, 
+    highLats: 'None' 
+  });
+
+  // 6. Listener saat user mengganti pilihan mode di UI
   metodeSelect.addEventListener("change", () => {
-    localStorage.setItem("metode", metodeSelect.value);
-    praytime = new PrayTime(metodeSelect.value);
+    const selectedMode = metodeSelect.value;
+    localStorage.setItem("metode", selectedMode);
+    
+    // Update settingan praytime seketika
+    praytime.setMethod(selectedMode);
+    
+    // Jika Kemenag, pastikan sudutnya tetap standar 20 & 18 derajat
+    if(selectedMode === "Kemenag") {
+      praytime.adjust({ fajr: 20, isha: 18 });
+    }
+
+    // Muat ulang jadwal agar UI berubah
     loadJadwal();
+    
+    console.log("Metode diubah ke:", selectedMode);
   });
 }
+
+// Pastikan dipanggil di awal script
 initMetode();
 
 /* ================
@@ -144,68 +196,81 @@ function labelSholat(key){ return namaSholatID[key]||key; }
 const urutanSholat = ["fajr","sunrise","dhuhr","asr","maghrib","isha"];
 
 /* ===============================
-   TAMPILKAN JADWAL SHOLAT
+   TAMPILKAN JADWAL (FIXED)
 ================================= */
-function tampilkanJadwal(times){
+function tampilkanJadwal(times) {
+  if (!times) return;
   jadwalList.innerHTML = "";
-  Object.keys(namaSholatID).forEach(key => {
+  
+  // Pastikan urutanSholat sudah ada di variabel global
+  const daftar = ["fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha"];
+  
+  daftar.forEach(key => {
     const div = document.createElement("div");
     div.className = "jadwal-item";
-    const jam = times[key]?.substring(0,5) || "--:--";
-    div.innerHTML = `<span>${labelSholat(key)}</span><span>${jam}</span>`;
+    
+    // Ambil 5 karakter pertama saja (HH:mm)
+    let jamRaw = times[key] || "--:--";
+    let jamFinal = jamRaw.substring(0, 5);
+    
+    div.innerHTML = `<span>${labelSholat(key)}</span><span>${jamFinal}</span>`;
     jadwalList.appendChild(div);
   });
 }
 
 /* ===============================
-   LOAD JADWAL FINAL
+   LOAD JADWAL (FIXED & CEPAT)
 ================================= */
-async function loadJadwal(){
-  if(!userLat || !userLng) return;
+async function loadJadwal() {
+  if (!userLat || !userLng) return;
 
   const now = new Date();
-  const todayKey = now.toDateString();
-  if(currentDateKey === todayKey && currentTimes) return;
+  
+  // 1. AMBIL DATA OFFLINE DULU (Supaya UI langsung tampil)
+  // Perbaikan argumen: praytime.getTimes(date, [lat, lng], timezone, dst, format)
+  try {
+    const offlineResult = praytime.getTimes(now, [userLat, userLng], "auto");
+    currentTimes = {
+      fajr: offlineResult.fajr,
+      sunrise: offlineResult.sunrise,
+      dhuhr: offlineResult.dhuhr,
+      asr: offlineResult.asr,
+      maghrib: offlineResult.maghrib,
+      isha: offlineResult.isha
+    };
+    tampilkanJadwal(currentTimes);
+    startCountdown();
+  } catch (e) {
+    console.error("Gagal memuat data offline:", e);
+  }
 
-  currentDateKey = todayKey;
-  notified = {};
-
-  const metodeValue = localStorage.getItem("metode")||"Kemenag";
+  // 2. AMBIL DATA ONLINE (Background update)
+  const metodeValue = localStorage.getItem("metode") || "Kemenag";
   const aladhanMethod = {
-    MWL:3, ISNA:2, Egypt:5, Makkah:4,
-    Karachi:1, Singapore:7, Kemenag:20
-  }[metodeValue]||20;
+    MWL:3, ISNA:2, Egypt:5, Makkah:4, Karachi:1, Singapore:7, Kemenag:20
+  }[metodeValue] || 20;
 
   try {
     const res = await fetch(`https://api.aladhan.com/v1/timings?latitude=${userLat}&longitude=${userLng}&method=${aladhanMethod}`);
     const json = await res.json();
-    if(json.code !== 200) throw new Error("API error");
-
-    const apiTimes = json.data.timings;
-    currentTimes = {
-      fajr: apiTimes.Fajr.substring(0,5),
-      sunrise: apiTimes.Sunrise.substring(0,5),
-      dhuhr: apiTimes.Dhuhr.substring(0,5),
-      asr: apiTimes.Asr.substring(0,5),
-      maghrib: apiTimes.Maghrib.substring(0,5),
-      isha: apiTimes.Isha.substring(0,5)
-    };
-
-  } catch(err){
-    console.warn("API gagal, fallback ke PrayTime",err);
-    const offlineTimes = praytime.location([userLat,userLng]).timezone(Intl.DateTimeFormat().resolvedOptions().timeZone).getTimes(now);
-    currentTimes = {
-      fajr: offlineTimes.fajr,
-      sunrise: offlineTimes.sunrise,
-      dhuhr: offlineTimes.dhuhr,
-      asr: offlineTimes.asr,
-      maghrib: offlineTimes.maghrib,
-      isha: offlineTimes.isha
-    };
+    
+    if (json && json.data) {
+      const apiTimes = json.data.timings;
+      currentTimes = {
+        fajr: apiTimes.Fajr,
+        sunrise: apiTimes.Sunrise,
+        dhuhr: apiTimes.Dhuhr,
+        asr: apiTimes.Asr,
+        maghrib: apiTimes.Maghrib,
+        isha: apiTimes.Isha
+      };
+      // Update UI dengan data yang lebih akurat dari API
+      tampilkanJadwal(currentTimes);
+      currentDateKey = now.toDateString();
+    }
+  } catch (err) {
+    console.warn("Gagal update dari API, menggunakan data offline.");
   }
-
-  tampilkanJadwal(currentTimes);
-  startCountdown();
 }
 
 /* Helper subtractMinutes */
