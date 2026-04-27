@@ -264,20 +264,60 @@ function hitungKiblat() {
   const dLon = (KAABAH.lng - userLng) * Math.PI / 180;
   const lat1 = userLat * Math.PI / 180;
   const lat2 = KAABAH.lat * Math.PI / 180;
+  
+  // Hitung Sudut Azimuth
   const y = Math.sin(dLon) * Math.cos(lat2);
   const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
   azimuthKiblat = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
-  document.getElementById("azimuthKabah").innerText = `Azimuth Ka'bah : ${azimuthKiblat.toFixed(2)}°`;
+
+  // Tampilkan Azimuth
+  const azimuthEl = document.getElementById("azimuthKabah");
+  if (azimuthEl) azimuthEl.innerText = `Azimuth Ka'bah : ${azimuthKiblat.toFixed(2)}°`;
+
+  // --- BAGIAN YANG HILANG: HITUNG & TAMPILKAN JARAK ---
+  const jarak = haversine(userLat, userLng, KAABAH.lat, KAABAH.lng);
+  const jarakEl = document.getElementById("jarakKabah");
+  if (jarakEl) {
+    jarakEl.innerText = `Jarak ke Ka'bah : ${jarak.toFixed(2)} Km`;
+  }
+}
+
+// Pastikan fungsi Haversine juga ada di dalam script Anda
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Radius bumi dalam Km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + 
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
 }
 
 window.addEventListener("deviceorientation", e => {
   if (e.alpha === null) return;
+  
+  // 1. Logika Pergerakan Kompas
   currentHeading = 360 - e.alpha;
   smoothHeading += (currentHeading - smoothHeading) * 0.1;
+
+  // Putar Piringan dan Garis Kiblat
   document.getElementById("compassDisk").style.transform = `rotate(${-smoothHeading}deg)`;
   document.getElementById("qiblatLine").style.transform = `translate(-50%,-100%) rotate(${azimuthKiblat - smoothHeading}deg)`;
+  
+  // 2. Hitung Selisih Sudut
   const selisih = ((azimuthKiblat - smoothHeading + 540) % 360) - 180;
   document.getElementById("selisihSudut").innerText = `Selisih Sudut : ${Math.abs(selisih).toFixed(1)}°`;
+
+  // 3. UPDATE DINAMIS TEKS ARAH MATA ANGIN (BAGIAN YANG DIPERBAIKI)
+  const labelsLengkap = ["Utara", "Timur Laut", "Timur", "Tenggara", "Selatan", "Barat Daya", "Barat", "Barat Laut"];
+  
+  // Mengonversi smoothHeading (0-360) ke indeks array (0-7)
+  const index = Math.round(smoothHeading / 45) % 8;
+  
+  const arahEl = document.getElementById("arahMataAngin");
+  if (arahEl) {
+    arahEl.innerText = `Arah Mata Angin : ${labelsLengkap[index]}`;
+  }
 }, true);
 
 /* ===============================
