@@ -91,46 +91,57 @@ function bersihkanKabupaten(text) {
 
 async function getGeoData() {
   try {
-    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${userLat}&lng=${userLng}`, {
-        headers: { "Accept-Language": "id-ID" }
-    });
+    // Memberikan header User-Agent sederhana agar Nominatim lebih kooperatif
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${userLat}&lon=${userLng}`, 
+      {
+        headers: {
+          "Accept-Language": "id-ID",
+          "User-Agent": "AdzanProApp/1.0" 
+        }
+      }
+    );
+    
     const data = await res.json();
     const addr = data.address || {};
 
-    // Mapping key Nominatim ke variabel lokasi
-    const desa = addr.village || addr.suburb || addr.hamlet || addr.neighbourhood || "";
-    const kecamatan = addr.city_district || addr.district || "";
-    const kabupaten = bersihkanKabupaten(addr.city || addr.county || addr.town || "");
+    // Nominatim menggunakan lon (bukan lng) di parameter URL, 
+    // dan strukturnya sering meletakkan nama daerah di key yang bervariasi.
+    const desa = addr.village || addr.suburb || addr.hamlet || addr.neighbourhood || addr.village || "";
+    const kecamatan = addr.city_district || addr.district || addr.municipality || "";
+    const kabupaten = bersihkanKabupaten(addr.city || addr.county || addr.town || addr.city_city || "");
     const provinsi = addr.state || "";
 
-    // Gabungkan bagian lokasi yang ada saja
-    const lokasiParts = [desa, kecamatan, kabupaten, provinsi].filter(Boolean);
+    // Gabungkan bagian lokasi
+    let lokasiParts = [desa, kecamatan, kabupaten, provinsi].filter(Boolean);
     
-    // Jika lokasiParts kosong, gunakan display_name (cadangan terakhir)
-    let lokasiFinal = lokasiParts.length 
-      ? capitalizeWords(lokasiParts.join(", ")) 
-      : (data.display_name ? data.display_name.split(',').slice(0, 3).join(',') : "Lokasi Terdeteksi");
+    // Jika array masih kosong atau terlalu pendek, ambil potongan dari display_name
+    let lokasiFinal;
+    if (lokasiParts.length >= 2) {
+      lokasiFinal = capitalizeWords(lokasiParts.join(", "));
+    } else if (data.display_name) {
+      // Ambil 3 bagian pertama dari display_name (biasanya Jalan, Desa, Kec)
+      lokasiFinal = data.display_name.split(',').slice(0, 3).join(',').trim();
+    } else {
+      lokasiFinal = "Lokasi Tidak Spesifik";
+    }
 
     const namaText = "📍 " + lokasiFinal;
     const koordinatText = userLat.toFixed(6) + ", " + userLng.toFixed(6);
 
-    // UPDATE UI HALAMAN UTAMA
-    const mainLokasi = document.getElementById("namaLokasi");
-    const mainKoord = document.getElementById("koordinat");
-    if (mainLokasi) mainLokasi.innerText = namaText;
-    if (mainKoord) mainKoord.innerText = koordinatText;
+    // Update Halaman Utama
+    document.getElementById("namaLokasi").innerText = namaText;
+    document.getElementById("koordinat").innerText = koordinatText;
 
-    // UPDATE UI OVERLAY KOMPAS (SINKRON)
-    const compLokasi = document.getElementById("compassLokasi");
-    const compKoord = document.getElementById("compassKoordinat");
-    if (compLokasi) compLokasi.innerText = namaText;
-    if (compKoord) compKoord.innerText = koordinatText;
-
-    console.log("Data Lokasi Terupdate:", lokasiFinal);
+    // Update Overlay Kompas
+    const cLokasi = document.getElementById("compassLokasi");
+    const cKoord = document.getElementById("compassKoordinat");
+    if (cLokasi) cLokasi.innerText = namaText;
+    if (cKoord) cKoord.innerText = koordinatText;
 
   } catch (e) {
-    console.error("Gagal Geocoding:", e);
-    document.getElementById("namaLokasi").innerText = "📍 Gagal memuat detail alamat";
+    console.error("Geocode error:", e);
+    document.getElementById("namaLokasi").innerText = "📍 Gagal memuat alamat";
   }
 }
 
