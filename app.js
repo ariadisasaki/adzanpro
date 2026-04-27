@@ -93,58 +93,55 @@ function capitalizeWords(str) { return str.replace(/\b\w/g, l => l.toUpperCase()
 function bersihkanKabupaten(text) { return text ? text.replace(/^Kabupaten\s+/i, "").replace(/^Kota\s+/i, "") : ""; }
 
 async function getGeoData() {
-  const mainLokasi = document.getElementById("namaLokasi");
-  const mainKoord = document.getElementById("koordinat");
-  const compLokasi = document.getElementById("compassLokasi");
-  const compKoord = document.getElementById("compassKoordinat");
+    const lokasiEl = document.getElementById('namaLokasi'); // Elemen Utama
+    const locEl = document.getElementById('koordinat');     // Elemen Koordinat Utama
+    const compLokasi = document.getElementById('compassLokasi'); // Elemen Kompas
+    const compKoord = document.getElementById('compassKoordinat');
 
-  // 1. Update teks koordinat angka di semua panel
-  const koordinatTeks = `${userLat.toFixed(6)}, ${userLng.toFixed(6)}`;
-  if (mainKoord) mainKoord.innerText = koordinatTeks;
-  if (compKoord) compKoord.innerText = koordinatTeks;
+    // 1. Update teks koordinat angka
+    const koordinatTeks = `${userLat.toFixed(6)}, ${userLng.toFixed(6)}`;
+    if (locEl) locEl.innerText = koordinatTeks;
+    if (compKoord) compKoord.innerText = koordinatTeks;
 
-  try {
-    if (mainLokasi) mainLokasi.innerText = "📍 Mencari lokasi...";
+    try {
+        if (lokasiEl) lokasiEl.innerText = "Mencari lokasi...";
 
-    // Fetch ke Nominatim dengan parameter accept-language=id
-    const r = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?lat=${userLat}&lon=${userLng}&format=json&accept-language=id`,
-      {
-        headers: { "User-Agent": "AdzanProApp/1.0" }
-      }
-    );
-    
-    if (!r.ok) throw new Error("Gagal mengambil data");
-    
-    const d = await r.json();
-    const a = d.address || {};
-    
-    // 2. Susun komponen alamat secara hierarkis sesuai permintaan Anda
-    // a.city_district seringkali berisi nama Kecamatan di Indonesia untuk data Nominatim
-    const komponenAlamat = [
-        a.village || a.suburb || a.hamlet || "",          // Desa/Kelurahan
-        a.city_district || a.district || a.municipality || "", // Kecamatan
-        bersihkanKabupaten(a.city || a.county || a.town || ""), // Kabupaten/Kota
-        a.state || ""                                     // Provinsi
-    ];
+        // Sesuai script Anda: format=json dan accept-language=id
+        const r = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${userLat}&lon=${userLng}&format=json&accept-language=id`,
+            { headers: { "User-Agent": "AdzanPro/1.0" } }
+        );
+        
+        if (!r.ok) throw new Error("Gagal mengambil data");
+        
+        const d = await r.json();
+        const a = d.address || {};
+        
+        // 2. Susun komponen alamat secara hierarkis (Persis Script Anda)
+        const komponenAlamat = [
+            a.village || a.suburb || a.town || a.city || "", // Desa/Kelurahan/Kota
+            a.district || a.county || "",                    // Kecamatan/Kabupaten
+            a.state || "",                                   // Provinsi                         
+            a.country || ""                                  // Negara
+        ];
 
-    // 3. Gabungkan komponen yang tidak kosong dengan tanda koma
-    const alamatLengkap = komponenAlamat
-        .filter(v => v && v.trim() !== "") 
-        .join(", ");                  
+        // 3. Gabungkan komponen yang tidak kosong dengan tanda koma (Persis Script Anda)
+        const alamatLengkap = komponenAlamat
+            .filter(v => v && v.trim() !== "") 
+            .join(", ");                  
 
-    const hasilFinal = alamatLengkap ? "📍 " + capitalizeWords(alamatLengkap) : "📍 Lokasi tidak dikenal";
+        const hasilFinal = alamatLengkap ? "📍 " + alamatLengkap : "📍 Lokasi tidak dikenal";
 
-    // Update UI Halaman Utama
-    if (mainLokasi) mainLokasi.innerText = hasilFinal;
+        // Update ke semua elemen UI Adzan Pro
+        if (lokasiEl) lokasiEl.innerText = hasilFinal;
+        if (compLokasi) compLokasi.innerText = hasilFinal;
 
-    // Update UI Overlay Kompas
-    if (compLokasi) compLokasi.innerText = hasilFinal;
-
-  } catch (err) {
-    console.error("Geocode Error:", err);
-    if (mainLokasi) mainLokasi.innerText = "📍 Gagal memuat nama lokasi";
-  }
+    } catch (err) {
+        console.error("Geocode Error:", err);
+        if (lokasiEl) {
+            lokasiEl.innerText = "Gagal memuat nama lokasi (Cek Koneksi)";
+        }
+    }
 }
 
 /* ===============================
