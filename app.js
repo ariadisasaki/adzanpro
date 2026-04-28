@@ -133,6 +133,7 @@ function tampilkanJadwal(times) {
 }
 
 async function loadJadwal() {
+    notified = {};
     if (!userLat || !userLng) return;
     const mValue = metodeSelect.value;
     const aladhanMethod = { MWL:3, ISNA:2, Egypt:5, Makkah:4, Karachi:1, Singapore:7, Kemenag:20 }[mValue] || 20;
