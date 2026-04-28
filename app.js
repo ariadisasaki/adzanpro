@@ -13,7 +13,7 @@ let userLng = null;
 let azimuthKiblat = 0;
 let currentHeading = 0;
 let smoothHeading = 0;
-let audioEnabled = true;
+let audioEnabled = localStorage.getItem("audioEnabled") !== "false";
 let notified = {};
 
 // Audio
@@ -319,6 +319,12 @@ function buatLabelPiringan() {
 function initApp() {
     initMetode();
     updateClock();
+    
+    const btnAudio = document.getElementById("toggleAudio");
+    if (btnAudio) {
+       btnAudio.innerText = audioEnabled ? "🔔 Audio ON" : "🔕 Audio OFF";
+    }
+   
     // Fungsi pembuat ticks & label tetap dipanggil di sini
     if(typeof createCompassTicks === 'function') createCompassTicks();
     if(typeof buatLabelPiringan === 'function') buatLabelPiringan();
@@ -333,7 +339,14 @@ document.getElementById("btnKiblat").onclick = () => { document.getElementById("
 document.getElementById("closeCompass").onclick = () => { document.getElementById("overlay").style.display = "none"; };
 document.getElementById("toggleAudio").onclick = () => {
     audioEnabled = !audioEnabled;
+    
+    // Simpan pilihan ke localStorage agar permanen
+    localStorage.setItem("audioEnabled", audioEnabled);
+    
+    // Update teks tombol
     document.getElementById("toggleAudio").innerText = audioEnabled ? "🔔 Audio ON" : "🔕 Audio OFF";
+    
+    console.log("Audio Status Tersimpan:", audioEnabled);
 };
 
 document.addEventListener("DOMContentLoaded", initApp);
