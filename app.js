@@ -306,48 +306,65 @@ document.getElementById("toggleAudio").onclick = () => {
 
 document.addEventListener("DOMContentLoaded", initApp);
 
-// Performance Pro Monitor (Refresh setiap 30 detik)
+// ====================================================
+// FULL FEATURE MONITOR - ADZAN PRO PERFORMANCE
+// ====================================================
 setInterval(() => {
     if(!userLat || !currentTimes) return;
     
-    // Hitung sisa waktu dalam menit untuk monitor
     const now = new Date();
-    const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
     
-    // Ambil data penggunaan memori (hanya jalan di Chrome/Edge)
-    const memory = window.performance && window.performance.memory ? 
-                   (window.performance.memory.usedJSHeapSize / (1024 * 1024)).toFixed(2) + " MB" : 
-                   "N/A";
+    // 1. Cek Integritas Data API (Mendeteksi kasus 00:11)
+    const apiStatus = currentTimes.fajr.startsWith("00:") ? "❌ DATA ERROR (Invalid)" : "✅ DATA OK";
+    
+    // 2. Cek Akurasi Kompas
+    const selisih = Math.abs(((azimuthKiblat - smoothHeading + 540) % 360) - 180);
+    const qiblatStatus = selisih < 2 ? "🎯 LOCKED" : "🔄 SEARCHING";
+
+    // 3. Cek Penggunaan Memori (Hanya browser berbasis Chromium)
+    const memUsage = window.performance && window.performance.memory ? 
+                     (window.performance.memory.usedJSHeapSize / (1024 * 1024)).toFixed(2) + " MB" : 
+                     "N/A";
 
     console.clear();
-    console.log("%c 🚀 ADZAN PRO - SYSTEM MONITOR ", "background:#a78c6d; color:#fff; font-weight:bold; padding:5px; border-radius:3px;");
+    console.log("%c 🛠️ ADZAN PRO - FEATURE DASHBOARD ", "background:#2c3e50; color:#ecf0f1; font-weight:bold; padding:5px; border-radius:3px;");
     
     console.table([
         {
-            "Kategori": "🌍 Geolokasi",
-            "Data 1": `Lat: ${userLat.toFixed(6)}`,
-            "Data 2": `Lon: ${userLng.toFixed(6)}`,
-            "Status": "📡 GPS Active"
+            "FITUR": "🕒 Waktu & Jadwal",
+            "STATUS": apiStatus,
+            "DETAIL": `Metode: ${metodeSelect.value}`,
+            "KETERANGAN": `Subuh: ${currentTimes.fajr}`
         },
         {
-            "Kategori": "🧭 Kompas",
-            "Data 1": `Azimuth: ${azimuthKiblat.toFixed(2)}°`,
-            "Data 2": `Heading: ${smoothHeading.toFixed(1)}°`,
-            "Status": Math.abs(((azimuthKiblat - smoothHeading + 540) % 360) - 180) < 2 ? "🎯 Locked" : "🔄 Moving"
+            "FITUR": "🧭 Kompas Kiblat",
+            "STATUS": qiblatStatus,
+            "DETAIL": `Heading: ${smoothHeading.toFixed(1)}°`,
+            "KETERANGAN": `Selisih: ${selisih.toFixed(1)}°`
         },
         {
-            "Kategori": "🕒 Waktu",
-            "Data 1": `Jam: ${now.toLocaleTimeString()}`,
-            "Data 2": `Method: ${metodeSelect.value}`,
-            "Status": `Suhu: ${currentTimes.fajr}`
+            "FITUR": "📍 Geolocation",
+            "STATUS": navigator.onLine ? "🌐 ONLINE" : "⚠️ OFFLINE",
+            "DETAIL": `${userLat.toFixed(4)}, ${userLng.toFixed(4)}`,
+            "KETERANGAN": "GPS Active"
         },
         {
-            "Kategori": "💻 Sistem",
-            "Data 1": `RAM: ${memory}`,
-            "Data 2": `Audio: ${audioEnabled ? 'ON' : 'OFF'}`,
-            "Status": navigator.onLine ? "🌐 Online" : "⚠️ Offline"
+            "FITUR": "🔊 Notifikasi Audio",
+            "STATUS": audioEnabled ? "🔔 ENABLED" : "🔕 MUTED",
+            "DETAIL": "Subuh & Normal",
+            "KETERANGAN": "Ready"
+        },
+        {
+            "FITUR": "🖥️ Resource Sistem",
+            "STATUS": "🚀 RUNNING",
+            "DETAIL": `RAM: ${memUsage}`,
+            "KETERANGAN": `Uptime: ${Math.floor(performance.now() / 1000)}s`
         }
     ]);
 
-    console.log("%c Tips: Jika jadwal meleset, gunakan perintah localStorage.clear() lalu refresh. ", "color:#a78c6d; font-style:italic;");
+    // Tambahkan log peringatan jika data API terdeteksi bermasalah
+    if (apiStatus.includes("ERROR")) {
+        console.log("%c ⚠️ PERINGATAN: API Aladhan memberikan data tidak valid (00:xx). Disarankan menggunakan mode fallback atau ganti jaringan! ", "color: #e74c3c; font-weight: bold;");
+    }
+    
 }, 30000);
