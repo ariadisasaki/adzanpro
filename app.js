@@ -306,30 +306,45 @@ document.getElementById("toggleAudio").onclick = () => {
 
 document.addEventListener("DOMContentLoaded", initApp);
 
-// Performance Monitor - PORTRAIT VERSION (Refresh setiap 30 detik)
+// Performance Monitor - FULL PORTRAIT (Jadwal + System)
 setInterval(() => {
     if(!userLat || !currentTimes) return;
     
     const now = new Date();
+    // Monitor Memori (Chromium Only)
     const mem = window.performance && window.performance.memory ? 
                 (window.performance.memory.usedJSHeapSize / (1024 * 1024)).toFixed(2) + " MB" : "N/A";
     
     const selisih = Math.abs(((azimuthKiblat - smoothHeading + 540) % 360) - 180);
-    const apiValid = !currentTimes.fajr.startsWith("00:");
+    const isApiError = currentTimes.fajr.startsWith("00:");
 
     console.clear();
-    console.log("%c 🛠️ ADZAN PRO PORTRAIT MONITOR ", "background:#a78c6d; color:#fff; font-weight:bold; padding:5px;");
+    console.log("%c 📊 ADZAN PRO - FULL SYSTEM REPORT ", "background:#2c3e50; color:#fff; font-weight:bold; padding:5px;");
 
-    // Struktur Portrait: Kategori fitur di sebelah kiri (Baris)
-    const portraitData = {
-        "1. JADWAL": { Status: apiValid ? "✅ OK" : "❌ ERROR", Detail: currentTimes.fajr, Info: metodeSelect.value },
-        "2. KOMPAS": { Status: selisih < 2 ? "🎯 LOCK" : "🔄 SEEK", Detail: `${smoothHeading.toFixed(1)}°`, Info: `Dev: ${selisih.toFixed(1)}°` },
-        "3. LOKASI": { Status: navigator.onLine ? "🌐 ON" : "⚠️ OFF", Detail: "GPS Active", Info: `${userLat.toFixed(4)}` },
-        "4. AUDIO ": { Status: audioEnabled ? "🔔 ON" : "🔕 MUTE", Detail: "Adzan Ready", Info: "Volume 100%" },
-        "5. SYSTEM": { Status: "🚀 RUN", Detail: mem, Info: `Up: ${Math.floor(performance.now()/1000)}s` }
+    // Membuat struktur tabel Portrait
+    const fullReport = {
+        "01. SUBUH    ": { Waktu: currentTimes.fajr, Status: isApiError ? "⚠️ ERROR" : "✅ OK" },
+        "02. TERBIT   ": { Waktu: currentTimes.sunrise, Status: "✅ OK" },
+        "03. DZUHUR   ": { Waktu: currentTimes.dhuhr, Status: "✅ OK" },
+        "04. ASHAR    ": { Waktu: currentTimes.asr, Status: "✅ OK" },
+        "05. MAGHRIB  ": { Waktu: currentTimes.maghrib, Status: "✅ OK" },
+        "06. ISYA     ": { Waktu: currentTimes.isha, Status: "✅ OK" },
+        "---": { Waktu: "---", Status: "---" }, // Pembatas visual
+        "LOC (Lat)    ": { Waktu: userLat.toFixed(6), Status: "📡 GPS" },
+        "LOC (Lon)    ": { Waktu: userLng.toFixed(6), Status: "📡 GPS" },
+        "QIBLAT (Az)  ": { Waktu: azimuthKiblat.toFixed(2) + "°", Status: "🕋 TARGET" },
+        "HEADING      ": { Waktu: smoothHeading.toFixed(1) + "°", Status: selisih < 2 ? "🎯 LOCKED" : "🔄 SEEK" },
+        "DEVIASI      ": { Waktu: selisih.toFixed(1) + "°", Status: "📏 DIST" },
+        "--- ": { Waktu: "---", Status: "---" },
+        "NET STATUS   ": { Waktu: navigator.onLine ? "ONLINE" : "OFFLINE", Status: "🌐 NET" },
+        "MEMORY       ": { Waktu: mem, Status: "💻 RAM" },
+        "UPTIME       ": { Waktu: Math.floor(performance.now()/1000) + "s", Status: "🚀 RUN" }
     };
 
-    console.table(portraitData);
+    console.table(fullReport);
 
-    if(!apiValid) console.log("%c ⚠️ ALERT: Data API korup (00:xx)! ", "color:red; font-weight:bold;");
+    // Notifikasi khusus jika data korup terdeteksi
+    if(isApiError) {
+        console.log("%c ‼️ DATA WARNING: Subuh terdeteksi 00:xx! Cek koneksi internet Anda. ", "background:red; color:white; padding:3px;");
+    }
 }, 30000);
