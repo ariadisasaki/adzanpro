@@ -153,7 +153,7 @@ async function loadJadwal() {
 }
 
 /* =================================
-   COUNTDOWN & ORIENTASI
+   COUNTDOWN & NOTIFIKASI (FIXED)
 ================================== */
 function startCountdown() {
     if (countdownInterval) clearInterval(countdownInterval);
@@ -183,24 +183,58 @@ function startCountdown() {
 
         const totalDetik = Math.floor((nextDate - now) / 1000);
         
-        // LOGIKA PEMICU ADZAN (DIPERBAIKI)
-        // Memicu adzan tepat saat detik 0
-        if (totalDetik === 0) {
-            console.log("WAKTUNYA ADZAN: " + nextName);
-            checkNotification(nextName, 0);
-            
-            // Muat ulang jadwal setelah adzan mulai untuk hari/jadwal berikutnya
-            setTimeout(loadJadwal, 2000); 
+        // --- FITUR BLINK NOTIFIKASI ---
+        const alertEl = document.getElementById("prayerAlert");
+        if (alertEl) {
+            // Muncul 10 menit (600 detik) sebelum adzan
+            if (totalDetik > 0 && totalDetik <= 600) {
+                alertEl.innerText = `⚠️ PERSIAPAN WAKTU ${namaSholatID[nextName].toUpperCase()}`;
+                alertEl.style.display = "block";
+            } else {
+                alertEl.style.display = "none";
+            }
         }
 
-        // Tampilan UI tetap berjalan
+        // --- LOGIKA PEMICU ADZAN (RANGE AMAN) ---
+        if (totalDetik <= 0 && totalDetik >= -2) {
+            if (!notified[nextName]) {
+                checkNotification(nextName);
+            }
+        }
+
         const h = Math.floor(totalDetik / 3600);
         const m = Math.floor((totalDetik % 3600) / 60);
         const s = totalDetik % 60;
+
         document.getElementById("menuju").innerText = totalDetik <= 1800 ? `Sebentar lagi Waktu ${namaSholatID[nextName]}` : `Menuju Waktu ${namaSholatID[nextName]}`;
         document.getElementById("countdown").innerText = `${h > 0 ? h + ' jam ' : ''}${m} menit ${s} detik lagi`;
         
     }, 1000);
+}
+
+// GUNAKAN SATU FUNGSI INI SAJA
+function checkNotification(name) {
+    if (notified[name]) return;
+    
+    console.log(`🔔 Adzan ${name} berkumandang`);
+    if (audioEnabled) {
+        const audio = (name === "fajr") ? adzanSubuh : adzanNormal;
+        audio.currentTime = 0; 
+        audio.play()
+            .then(() => {
+                notified[name] = true;
+                // Reload jadwal otomatis setelah Isya untuk persiapan Subuh besok
+                if (name === "isha") setTimeout(loadJadwal, 10000);
+            })
+            .catch(error => {
+                console.error("Autoplay diblokir:", error);
+                const alertEl = document.getElementById("prayerAlert");
+                if (alertEl) {
+                    alertEl.innerText = "⚠️ KLIK LAYAR UNTUK SUARA ADZAN";
+                    alertEl.style.display = "block";
+                }
+            });
+    }
 }
 
 function checkNotification(name, diff) {
