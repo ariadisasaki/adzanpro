@@ -306,10 +306,48 @@ document.getElementById("toggleAudio").onclick = () => {
 
 document.addEventListener("DOMContentLoaded", initApp);
 
-// Performance Log (Refresh setiap 30 detik)
+// Performance Pro Monitor (Refresh setiap 30 detik)
 setInterval(() => {
-    if(!userLat) return;
+    if(!userLat || !currentTimes) return;
+    
+    // Hitung sisa waktu dalam menit untuk monitor
+    const now = new Date();
+    const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
+    
+    // Ambil data penggunaan memori (hanya jalan di Chrome/Edge)
+    const memory = window.performance && window.performance.memory ? 
+                   (window.performance.memory.usedJSHeapSize / (1024 * 1024)).toFixed(2) + " MB" : 
+                   "N/A";
+
     console.clear();
-    console.log("%c ADZAN PRO MONITOR ", "background:#2c3e50;color:#fff;padding:5px;");
-    console.table([{Lat: userLat, Lon: userLng, Azimuth: azimuthKiblat.toFixed(2), Heading: smoothHeading.toFixed(1)}]);
+    console.log("%c 🚀 ADZAN PRO - SYSTEM MONITOR ", "background:#a78c6d; color:#fff; font-weight:bold; padding:5px; border-radius:3px;");
+    
+    console.table([
+        {
+            "Kategori": "🌍 Geolokasi",
+            "Data 1": `Lat: ${userLat.toFixed(6)}`,
+            "Data 2": `Lon: ${userLng.toFixed(6)}`,
+            "Status": "📡 GPS Active"
+        },
+        {
+            "Kategori": "🧭 Kompas",
+            "Data 1": `Azimuth: ${azimuthKiblat.toFixed(2)}°`,
+            "Data 2": `Heading: ${smoothHeading.toFixed(1)}°`,
+            "Status": Math.abs(((azimuthKiblat - smoothHeading + 540) % 360) - 180) < 2 ? "🎯 Locked" : "🔄 Moving"
+        },
+        {
+            "Kategori": "🕒 Waktu",
+            "Data 1": `Jam: ${now.toLocaleTimeString()}`,
+            "Data 2": `Method: ${metodeSelect.value}`,
+            "Status": `Suhu: ${currentTimes.fajr}`
+        },
+        {
+            "Kategori": "💻 Sistem",
+            "Data 1": `RAM: ${memory}`,
+            "Data 2": `Audio: ${audioEnabled ? 'ON' : 'OFF'}`,
+            "Status": navigator.onLine ? "🌐 Online" : "⚠️ Offline"
+        }
+    ]);
+
+    console.log("%c Tips: Jika jadwal meleset, gunakan perintah localStorage.clear() lalu refresh. ", "color:#a78c6d; font-style:italic;");
 }, 30000);
