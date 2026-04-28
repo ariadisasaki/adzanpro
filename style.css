@@ -363,3 +363,20 @@ select, button, .developer-link {
 .jadwal-item span {
   transition: all 0.3s ease;
 }
+
+/* Pastikan warna dasar tombol Toggle Audio tetap putih/terang */
+#toggleAudio {
+  background: #ffffff; /* Tetap putih */
+  color: #333;         /* Teks gelap agar terbaca */
+  border: 1px solid #dcd0c0;
+  padding: 10px 20px;
+  border-radius: 25px;
+}
+
+/* Perbaiki efek hover khusus untuk Toggle Audio agar tidak jadi hitam */
+#toggleAudio:hover {
+  background: #fdfaf6 !important; /* Warna krem sangat muda saat disentuh */
+  color: #a78c6d !important;      /* Teks berubah jadi warna coklat khas Adzan Pro */
+  border-color: #a78c6d;
+  transform: translateY(-2px);
+}
