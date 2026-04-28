@@ -162,6 +162,7 @@ function startCountdown() {
         if (!currentTimes) return;
         const now = new Date();
         
+        // Update list jadwal tiap menit agar status 'active' pindah tepat waktu
         if (now.getMinutes() !== lastMinute) {
             tampilkanJadwal(currentTimes);
             lastMinute = now.getMinutes();
@@ -185,9 +186,24 @@ function startCountdown() {
         const m = Math.floor((totalDetik % 3600) / 60);
         const s = totalDetik % 60;
 
+        // Update teks countdown utama
         document.getElementById("menuju").innerText = totalDetik <= 1800 ? `Sebentar lagi Waktu ${namaSholatID[nextName]}` : `Menuju Waktu ${namaSholatID[nextName]}`;
         document.getElementById("countdown").innerText = `${h > 0 ? h + ' jam ' : ''}${m} menit ${s} detik lagi`;
         
+        // --- FITUR BLINK NOTIFIKASI (TAMBAHKAN INI) ---
+        const alertEl = document.getElementById("prayerAlert");
+        if (alertEl) {
+            // Jika waktu kurang dari 10 menit (600 detik)
+            if (totalDetik > 0 && totalDetik <= 600) {
+                alertEl.innerText = `⚠️ PERSIAPAN WAKTU ${namaSholatID[nextName].toUpperCase()}`;
+                alertEl.style.display = "block";
+            } else {
+                alertEl.innerText = "";
+                alertEl.style.display = "none";
+            }
+        }
+        // ----------------------------------------------
+
         if (totalDetik === 0) {
             checkNotification(nextName, 0);
             setTimeout(loadJadwal, 2000);
