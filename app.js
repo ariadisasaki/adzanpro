@@ -152,9 +152,6 @@ async function loadJadwal() {
     startCountdown();
 }
 
-/* =================================
-   COUNTDOWN & NOTIFIKASI (FIXED)
-================================== */
 function startCountdown() {
     if (countdownInterval) clearInterval(countdownInterval);
     let lastMinute = -1;
@@ -210,9 +207,9 @@ function startCountdown() {
     }, 1000);
 }
 
-// HANYA PAKAI SATU FUNGSI INI (Hapus duplikat lainnya!)
 function checkNotification(name) {
-    if (notified[name]) return;
+    // 1. CEK: Jika yang tiba adalah waktu 'sunrise', segera batalkan (jangan adzan)
+    if (name === "sunrise" || notified[name]) return;
     
     console.log(`🔔 Memutar Adzan: ${name}`);
     if (audioEnabled) {
@@ -221,12 +218,13 @@ function checkNotification(name) {
         
         audio.play()
             .then(() => {
-                notified[name] = true; // Tandai sudah adzan agar tidak looping
+                notified[name] = true;
                 console.log("✅ Audio sukses.");
+                // Reload jadwal otomatis setelah Isya
                 if (name === "isha") setTimeout(loadJadwal, 10000); 
             })
             .catch(error => {
-                console.error("❌ Autoplay diblokir browser:", error);
+                console.error("❌ Autoplay diblokir:", error);
                 const alertEl = document.getElementById("prayerAlert");
                 if (alertEl) {
                     alertEl.innerText = "⚠️ KLIK LAYAR UNTUK SUARA ADZAN";
