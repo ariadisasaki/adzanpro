@@ -153,7 +153,7 @@ async function loadJadwal() {
 }
 
 /* =================================
-   COUNTDOWN & NOTIFIKASI (FIXED)
+   COUNTDOWN & NOTIFIKASI (FIXED TOTAL)
 ================================== */
 function startCountdown() {
     if (countdownInterval) clearInterval(countdownInterval);
@@ -183,19 +183,20 @@ function startCountdown() {
 
         const totalDetik = Math.floor((nextDate - now) / 1000);
         
-        // --- FITUR BLINK NOTIFIKASI ---
+        // --- 1. FITUR BLINK NOTIFIKASI (10 Menit Sebelum) ---
         const alertEl = document.getElementById("prayerAlert");
         if (alertEl) {
-            // Muncul 10 menit (600 detik) sebelum adzan
-            if (totalDetik > 0 && totalDetik <= 600) {
+            if (totalDetik > 0 && totalDetik <= 600) { 
                 alertEl.innerText = `⚠️ PERSIAPAN WAKTU ${namaSholatID[nextName].toUpperCase()}`;
                 alertEl.style.display = "block";
+                alertEl.classList.add("blink-text"); // Pastikan class blink aktif
             } else {
                 alertEl.style.display = "none";
+                alertEl.classList.remove("blink-text");
             }
         }
 
-        // --- LOGIKA PEMICU ADZAN (RANGE AMAN) ---
+        // --- 2. LOGIKA PEMICU ADZAN (Range Aman 0 s/d -2 detik) ---
         if (totalDetik <= 0 && totalDetik >= -2) {
             if (!notified[nextName]) {
                 checkNotification(nextName);
@@ -205,61 +206,35 @@ function startCountdown() {
         const h = Math.floor(totalDetik / 3600);
         const m = Math.floor((totalDetik % 3600) / 60);
         const s = totalDetik % 60;
-
         document.getElementById("menuju").innerText = totalDetik <= 1800 ? `Sebentar lagi Waktu ${namaSholatID[nextName]}` : `Menuju Waktu ${namaSholatID[nextName]}`;
         document.getElementById("countdown").innerText = `${h > 0 ? h + ' jam ' : ''}${m} menit ${s} detik lagi`;
         
     }, 1000);
 }
 
-// GUNAKAN SATU FUNGSI INI SAJA
+// GUNAKAN SATU FUNGSI INI SAJA (HAPUS YANG LAIN)
 function checkNotification(name) {
     if (notified[name]) return;
     
-    console.log(`🔔 Adzan ${name} berkumandang`);
+    console.log(`🔔 Trigger Adzan: ${name}`);
     if (audioEnabled) {
         const audio = (name === "fajr") ? adzanSubuh : adzanNormal;
         audio.currentTime = 0; 
+        
         audio.play()
             .then(() => {
                 notified[name] = true;
-                // Reload jadwal otomatis setelah Isya untuk persiapan Subuh besok
-                if (name === "isha") setTimeout(loadJadwal, 10000);
+                console.log("✅ Audio berhasil diputar");
+                if (name === "isha") setTimeout(loadJadwal, 10000); 
             })
             .catch(error => {
-                console.error("Autoplay diblokir:", error);
+                console.error("❌ Gagal Autoplay:", error);
                 const alertEl = document.getElementById("prayerAlert");
                 if (alertEl) {
                     alertEl.innerText = "⚠️ KLIK LAYAR UNTUK SUARA ADZAN";
                     alertEl.style.display = "block";
                 }
             });
-    }
-}
-
-function checkNotification(name, diff) {
-    // Tambahkan log untuk debug di console saat waktu masuk
-    console.log(`Mencoba memutar audio untuk: ${name}, Status Audio: ${audioEnabled}`);
-    
-    if (diff === 0 && !notified[name]) {
-        if (audioEnabled) {
-            const audioToPlay = (name === "fajr") ? adzanSubuh : adzanNormal;
-            
-            // Reset audio ke awal sebelum dimainkan
-            audioToPlay.currentTime = 0; 
-            
-            audioToPlay.play()
-                .then(() => {
-                    console.log("Audio berhasil diputar secara otomatis.");
-                    notified[name] = true; // Tandai sukses diputar
-                })
-                .catch(error => {
-                    console.error("Autoplay dicegah oleh browser. Butuh klik pengguna.", error);
-                    // Tampilkan pesan di UI jika gagal
-                    document.getElementById("prayerAlert").innerText = "⚠️ Klik layar untuk aktifkan suara adzan!";
-                    document.getElementById("prayerAlert").style.display = "block";
-                });
-        }
     }
 }
 
