@@ -1,10 +1,7 @@
-/* ====================================================
-   ADZAN PRO - FINAL PRODUCTION BY ARIADI FORESTER
-==================================================== */
-
+// === ADZAN PRO - FINAL PRODUCTION ===
 const KAABAH = { lat: 21.4225, lng: 39.8262 };
 
-// State Global
+// === STATE GLOBAL ===
 let praytime;
 let countdownInterval = null;
 let currentTimes = null;
@@ -16,17 +13,15 @@ let smoothHeading = 0;
 let audioEnabled = localStorage.getItem("audioEnabled") !== "false";
 let notified = {};
 
-// Audio
+// === AUDIO ===
 const adzanSubuh = new Audio("audio/adzan_subuh.mp3");
 const adzanNormal = new Audio("audio/adzan_normal.mp3");
 
-// Elemen DOM
+// === ELEMEN DOM ===
 const metodeSelect = document.getElementById("metode");
 const jadwalList = document.getElementById("jadwalList");
 
-/* ================
-   HELPER: FORMAT
-================ */
+// === HELPER: FORMAT ===
 function formatWaktuManual(time) {
     if (typeof time === 'string' && time.includes(':')) return time.substring(0, 5);
     let hours = Math.floor(time);
@@ -35,6 +30,7 @@ function formatWaktuManual(time) {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 }
 
+// === UPDATE JAM ===
 function updateClock() {
     const now = new Date();
     const jamEl = document.getElementById("jam");
@@ -44,9 +40,7 @@ function updateClock() {
 }
 setInterval(updateClock, 1000);
 
-/* ============================
-   INIT METODE
-============================ */
+// === INIT METODE ===
 const metodeList = {
     MWL: "Muslim World League",
     ISNA: "ISNA",
@@ -78,9 +72,7 @@ function initMetode() {
     });
 }
 
-/* =============
-   GEOLOKASI
-============= */
+// === GEOLOKASI ===
 async function getGeoData() {
     const lokasiEl = document.getElementById('namaLokasi');
     const locEl = document.getElementById('koordinat');
@@ -106,9 +98,7 @@ async function getGeoData() {
     }
 }
 
-/* ===============
-   LOAD JADWAL
-=============== */
+// === LOAD JADWAL ===
 const namaSholatID = { fajr: "Subuh", sunrise: "Terbit", dhuhr: "Dzuhur", asr: "Ashar", maghrib: "Maghrib", isha: "Isya" };
 const urutanSholat = ["fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha"];
 
@@ -152,6 +142,7 @@ async function loadJadwal() {
     startCountdown();
 }
 
+// === HITUNG MUNDUR ===
 function startCountdown() {
     if (countdownInterval) clearInterval(countdownInterval);
     let lastMinute = -1;
@@ -207,6 +198,7 @@ function startCountdown() {
     }, 1000);
 }
 
+// === CEK NOTIFIKASI ===
 function checkNotification(name) {
     // 1. CEK: Jika yang tiba adalah waktu 'sunrise', segera batalkan (jangan adzan)
     if (name === "sunrise" || notified[name]) return;
@@ -234,6 +226,7 @@ function checkNotification(name) {
     }
 }
 
+// === HITUNG JARAK KE KA'BAH ===
 function haversine(lat1, lon1, lat2, lon2) {
     const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -242,6 +235,7 @@ function haversine(lat1, lon1, lat2, lon2) {
     return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
 
+// === HITUNG AZIMUT KA'BAH ===
 function hitungKiblat() {
     const dLon = (KAABAH.lng - userLng) * Math.PI / 180;
     const lat1 = userLat * Math.PI / 180;
@@ -269,9 +263,7 @@ window.addEventListener("deviceorientation", e => {
     document.getElementById("arahMataAngin").innerText = `Arah Mata Angin : ${labels[Math.round(smoothHeading / 45) % 8]}`;
 }, true);
 
- /* =================================
-   FUNGSI PEMBUAT ELEMEN KOMPAS
-================================== */
+// === BUAT ELEMEN KOMPAS ===
 function createCompassTicks() {
     const container = document.getElementById("ticks");
     if (!container) return;
@@ -290,6 +282,7 @@ function createCompassTicks() {
     }
 }
 
+// === BUAT PIRINGAN KOMPAS ===
 function buatLabelPiringan() {
     const container = document.getElementById("directionLabels");
     if (!container) return;
@@ -313,9 +306,7 @@ function buatLabelPiringan() {
     });
 }      
 
-/* ===============
-   INITIALIZE
-=============== */
+// === INITIALIZE APP ===
 function initApp() {
     initMetode();
     updateClock();
@@ -351,7 +342,7 @@ document.getElementById("toggleAudio").onclick = () => {
 
 document.addEventListener("DOMContentLoaded", initApp);
 
-// Performance Monitor - FULL PORTRAIT (Jadwal + System)
+// === CONSOLE PERFORMANCE MONITOR ===
 setInterval(() => {
     if(!userLat || !currentTimes) return;
     
